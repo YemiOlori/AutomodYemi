@@ -13,9 +13,11 @@ import configparser
 import keyboard
 from rich.table import Table
 from rich.console import Console
-from AutoMod.ch_mod_tools import Clubhouse
+from AutoMod.mod_tools import Clubhouse
+
 
 # Set some global variables
+# Figure this out when you're ready to start playing music
 try:
     import agorartc
     RTC = agorartc.createRtcEngineBridge()
@@ -31,6 +33,7 @@ try:
         print("[-] Failed to set the high quality audio profile")
 except ImportError:
     RTC = None
+
 
 def set_interval(interval):
     """ (int) -> decorator
@@ -52,7 +55,9 @@ def set_interval(interval):
         return wrap
     return decorator
 
-def write_config(user_id, user_token, user_device, filename='setting.ini'):
+
+def write_config(user_id, user_token, user_device, refresh_token, access_token,
+                 filename='setting.ini'):
     """ (str, str, str, str) -> bool
 
     Write Config. return True on successful file write
@@ -62,10 +67,13 @@ def write_config(user_id, user_token, user_device, filename='setting.ini'):
         "user_device": user_device,
         "user_id": user_id,
         "user_token": user_token,
+        "refresh_token": refresh_token,
+        "access_token": access_token
     }
     with open(filename, 'w') as config_file:
         config.write(config_file)
     return True
+
 
 def read_config(filename='setting.ini'):
     """ (str) -> dict of str
@@ -308,10 +316,11 @@ def user_authentication(client):
 
     result = None
     while True:
-        user_phone_number = input("[.] Please enter your phone number. (+818043217654) > ")
+        user_phone_number = phone_number if phone_number else \
+            input("[.] Please enter your phone number. (+818043217654) > ")
         result = client.start_phone_number_auth(user_phone_number)
         if not result['success']:
-            print(f"[-] Error occured during authentication. ({result['error_message']})")
+            print(f"[-] Error occurred during authentication. ({result['error_message']})")
             continue
         break
 
@@ -327,13 +336,15 @@ def user_authentication(client):
     user_id = result['user_profile']['user_id']
     user_token = result['auth_token']
     user_device = client.HEADERS.get("CH-DeviceId")
-    write_config(user_id, user_token, user_device)
+    refresh_token = result['refresh_token']
+    access_token = result['access_token']
+    write_config(user_id, user_token, user_device, refresh_token, access_token)
 
     print("[.] Writing configuration file complete.")
 
-    if result['is_waitlisted']:
-        print("[!] You're still on the waitlist. Find your friends to get yourself in.")
-        return
+    # if result['is_waitlisted']:
+    #     print("[!] You're still on the waitlist. Find your friends to get yourself in.")
+    #     return
 
     # Authenticate user first and start doing something
     client = Clubhouse(
@@ -341,10 +352,12 @@ def user_authentication(client):
         user_token=user_token,
         user_device=user_device
     )
-    if result['is_onboarding']:
-        process_onboarding(client)
 
-    return
+    # if result['is_onboarding']:
+    #     process_onboarding(client)
+
+    # change this
+    return result
 
 def main():
     """

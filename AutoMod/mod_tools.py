@@ -65,8 +65,8 @@ class Clubhouse:
         "Content-Type": "application/json; charset=utf-8",
         "Cookie": f"__cfduid={secrets.token_hex(21)}{random.randint(1, 9)}",
 
-        "CH-DeviceId": str(uuid.uuid4()).upper(),
-        "Ch-Session-Id": str(uuid.uuid4()).upper(),
+        # "CH-DeviceId": str(uuid.uuid4()).upper(),
+        # "Ch-Session-Id": str(uuid.uuid4()).upper(),
 
     }
 
@@ -138,7 +138,7 @@ class Clubhouse:
             "phone_number": phone_number
         }
         req = requests.post(f"{self.API_URL}/start_phone_number_auth", headers=self.HEADERS, json=data)
-        return req.headers, req.json()
+        return req.json()
 
     @unstable_endpoint
     def resend_phone_number_auth(self, phone_number):

@@ -153,3 +153,7 @@ dmypy.json
 # Gradle:
 .idea/gradle.xml
 .idea/libraries
+
+# Tutorials
+img_viewer.py
+*.ipynb
