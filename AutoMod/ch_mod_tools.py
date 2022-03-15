@@ -4,7 +4,7 @@
 # pylint: disable=no-self-argument,not-callable
 
 """
-clubhouse_mod.py
+ch_mod.py
 """
 
 import uuid
@@ -63,7 +63,11 @@ class Clubhouse:
         "User-Agent": f"{API_UA}",
         "Connection": "keep-alive",
         "Content-Type": "application/json; charset=utf-8",
-        "Cookie": f"__cfduid={secrets.token_hex(21)}{random.randint(1, 9)}"
+        "Cookie": f"__cfduid={secrets.token_hex(21)}{random.randint(1, 9)}",
+
+        "CH-DeviceId": str(uuid.uuid4()).upper(),
+        "Ch-Session-Id": str(uuid.uuid4()).upper(),
+
     }
 
     # Where do User and Device IDs come from?
@@ -78,13 +82,13 @@ class Clubhouse:
             return func(self, *args, **kwargs)
         return wrap
 
-    # def unstable_endpoint(func):
-    #     """ Simple decorator to warn that this endpoint is never tested at all. """
-    #     @functools.wraps(func)
-    #     def wrap(self, *args, **kwargs):
-    #         print("[!] This endpoint is NEVER TESTED and MAY BE UNSTABLE. BE CAREFUL!")
-    #         return func(self, *args, **kwargs)
-    #     return wrap
+    def unstable_endpoint(func):
+        """ Simple decorator to warn that this endpoint is never tested at all. """
+        @functools.wraps(func)
+        def wrap(self, *args, **kwargs):
+            print("[!] This endpoint is NEVER TESTED and MAY BE UNSTABLE. BE CAREFUL!")
+            return func(self, *args, **kwargs)
+        return wrap
 
     def __init__(self, user_id='', user_token='', user_device='', headers=None):
         """ (Clubhouse, str, str, str, dict) -> NoneType
@@ -127,9 +131,31 @@ class Clubhouse:
         if self.HEADERS.get("Authorization"):
             raise Exception('Already Authenticated')
         data = {
+            "tokens": {
+                "rc_token": None,
+                "device_token": None
+            },
             "phone_number": phone_number
         }
         req = requests.post(f"{self.API_URL}/start_phone_number_auth", headers=self.HEADERS, json=data)
+        return req.headers, req.json()
+
+    @unstable_endpoint
+    def resend_phone_number_auth(self, phone_number):
+        """ (Clubhouse, str) -> dict
+
+        Resend the verification message
+        """
+        if self.HEADERS.get("Authorization"):
+            raise Exception('Already Authenticated')
+        data = {
+            "tokens": {
+                "rc_token": None,
+                "device_token": None
+            },
+            "phone_number": phone_number
+        }
+        req = requests.post(f"{self.API_URL}/resend_phone_number_auth", headers=self.HEADERS, json=data)
         return req.json()
 
     def complete_phone_number_auth(self, phone_number, rc_token, verification_code):

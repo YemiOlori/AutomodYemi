@@ -13,7 +13,7 @@ import configparser
 import keyboard
 from rich.table import Table
 from rich.console import Console
-from clubhouse.clubhouse import Clubhouse
+from AutoMod.ch_mod_tools import Clubhouse
 
 # Set some global variables
 try:
@@ -78,57 +78,57 @@ def read_config(filename='setting.ini'):
         return dict(config['Account'])
     return dict()
 
-def process_onboarding(client):
-    """ (Clubhouse) -> NoneType
-
-    This is to process the initial setup for the first time user.
-    """
-    print("=" * 30)
-    print("Welcome to Clubhouse!\n")
-    print("The registration is not yet complete.")
-    print("Finish the process by entering your legal name and your username.")
-    print("WARNING: THIS FEATURE IS PURELY EXPERIMENTAL.")
-    print("         YOU CAN GET BANNED FOR REGISTERING FROM THE CLI ACCOUNT.")
-    print("=" * 30)
-
-    while True:
-        user_realname = input("[.] Enter your legal name (John Smith): ")
-        user_username = input("[.] Enter your username (elonmusk1234): ")
-
-        user_realname_split = user_realname.split(" ")
-
-        if len(user_realname_split) != 2:
-            print("[-] Please enter your legal name properly.")
-            continue
-
-        if not (user_realname_split[0].isalpha() and
-                user_realname_split[1].isalpha()):
-            print("[-] Your legal name is supposed to be written in alphabets only.")
-            continue
-
-        if len(user_username) > 16:
-            print("[-] Your username exceeds above 16 characters.")
-            continue
-
-        if not user_username.isalnum():
-            print("[-] Your username is supposed to be in alphanumerics only.")
-            continue
-
-        client.update_name(user_realname)
-        result = client.update_username(user_username)
-        if not result['success']:
-            print(f"[-] You failed to update your username. ({result})")
-            continue
-
-        result = client.check_waitlist_status()
-        if not result['success']:
-            print("[-] Your registration failed.")
-            print(f"    It's better to sign up from a real device. ({result})")
-            continue
-
-        print("[-] Registration Complete!")
-        print("    Try registering by real device if this process pops again.")
-        break
+# def process_onboarding(client):
+#     """ (Clubhouse) -> NoneType
+#
+#     This is to process the initial setup for the first time user.
+#     """
+#     print("=" * 30)
+#     print("Welcome to Clubhouse!\n")
+#     print("The registration is not yet complete.")
+#     print("Finish the process by entering your legal name and your username.")
+#     print("WARNING: THIS FEATURE IS PURELY EXPERIMENTAL.")
+#     print("         YOU CAN GET BANNED FOR REGISTERING FROM THE CLI ACCOUNT.")
+#     print("=" * 30)
+#
+#     while True:
+#         user_realname = input("[.] Enter your legal name (John Smith): ")
+#         user_username = input("[.] Enter your username (elonmusk1234): ")
+#
+#         user_realname_split = user_realname.split(" ")
+#
+#         if len(user_realname_split) != 2:
+#             print("[-] Please enter your legal name properly.")
+#             continue
+#
+#         if not (user_realname_split[0].isalpha() and
+#                 user_realname_split[1].isalpha()):
+#             print("[-] Your legal name is supposed to be written in alphabets only.")
+#             continue
+#
+#         if len(user_username) > 16:
+#             print("[-] Your username exceeds above 16 characters.")
+#             continue
+#
+#         if not user_username.isalnum():
+#             print("[-] Your username is supposed to be in alphanumerics only.")
+#             continue
+#
+#         client.update_name(user_realname)
+#         result = client.update_username(user_username)
+#         if not result['success']:
+#             print(f"[-] You failed to update your username. ({result})")
+#             continue
+#
+#         result = client.check_waitlist_status()
+#         if not result['success']:
+#             print("[-] Your registration failed.")
+#             print(f"    It's better to sign up from a real device. ({result})")
+#             continue
+#
+#         print("[-] Registration Complete!")
+#         print("    Try registering by real device if this process pops again.")
+#         break
 
 def print_channel_list(client, max_limit=20):
     """ (Clubhouse) -> NoneType
@@ -142,7 +142,15 @@ def print_channel_list(client, max_limit=20):
     table.add_column("channel_name", style="cyan", justify="right")
     table.add_column("topic")
     table.add_column("speaker_count")
-    channels = client.get_feed()['items'] # ['channel']
+    feed = client.get_feed()
+
+    channels = []
+    for feed_item in feed['items']:
+
+        key = feed_item.keys()
+        if 'channel' in key:
+            channels.append(feed_item)
+
     i = 0
     for channel in channels:
         channel = channel['channel']
