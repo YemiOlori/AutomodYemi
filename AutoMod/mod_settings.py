@@ -11,13 +11,22 @@ config_object["USERINFO"] = {
     'user_id': '541615340'
 }
 
+config_object["MODLIST1"] = {
+    'Deon': '27813',
+    'Disco Doggie': '2350087'
+}
+
 config_object["GUESTLIST1"] = {
     'Ab': '291161',
     'Alexis': '409839',
     'Ankit': '1273923840',
+    'Brandon': '298207',
     'Breana': '1566581',
+    'Bree': '1527064',
     'Brenna': '769545',
     'Bomani': '194113805',
+    'Cassi': '123012',
+    'Danyelle': '24464',
     'Deon': '27813',
     'Destiny': '628404',
     'Disco Doggie': '2350087',
@@ -25,10 +34,15 @@ config_object["GUESTLIST1"] = {
     'Ganeesh': '107516',
     'Grace': '34496',
     'Jordan': '373271',
+    'Joy': '34765',
     'JULEEN': '167752',
+    'just10': '415882',
     'LeoRising': '243603',
+    'LetaShae': '1724156',
+    'Mandiie': '23047',
     'Mark': '21188',
     'Marlena': '1640',
+    'Mavis': '1508768079',
     'phileo': '148584',
     'Tabitha': '1414736198',
     'Taii': '4163875',
@@ -36,6 +50,8 @@ config_object["GUESTLIST1"] = {
     'Scotty': '12208',
     'Solar': '298894012'
 }
+
+
 
 
 #Write the above sections to config.ini file

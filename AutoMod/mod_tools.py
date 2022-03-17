@@ -1611,3 +1611,152 @@ class Clubhouse:
         query = f"user_id={user_id}&page_size={page_size}&page={page}"
         req = requests.get(f"{self.API_URL}/get_events_for_user?{query}", headers=self.HEADERS)
         return req.json()
+
+
+    @require_authentication
+    def get_events_for_user(self, user_id='', page_size=25, page=1):
+        """ (Clubhouse, str, int, int) -> dict
+
+        Get events for the specific user.
+        """
+        query = f"user_id={user_id}&page_size={page_size}&page={page}"
+        req = requests.get(f"{self.API_URL}/get_events_for_user?{query}", headers=self.HEADERS)
+        return req.json()
+
+
+    @require_authentication
+    def get_channel_messages(self, channel):
+        """ (Clubhouse, str) -> dict
+
+        Get events for the specific user.
+        """
+        query = f"channel={channel}&is_chronological_order=0"
+        req = requests.get(f"{self.API_URL}/get_channel_messages?{query}", headers=self.HEADERS)
+        return req.json()
+
+
+    @require_authentication
+    def send_channel_message(self, channel, message):
+        """ (Clubhouse, str, str) -> dict
+
+        Get events for the specific user.
+        """
+        data = {
+            "channel": channel,
+            "message": message
+        }
+        req = requests.post(f"{self.API_URL}/send_channel_message", headers=self.HEADERS, json=data)
+        return req.json()
+
+
+    @require_authentication
+    def get_backchannel(self):
+        """ (Clubhouse, str, str) -> dict
+
+        Get events for the specific user.
+        """
+        req = requests.get(f"{self.API_URL}/get_chats", headers=self.HEADERS)
+        return req.json()
+
+
+    @require_authentication
+    def search_chats(self, participant_ids):
+        """ (Clubhouse, str, str) -> dict
+
+        Get events for the specific user.
+        """
+        data = {
+            "source": None,
+            "participant_ids": participant_ids
+        }
+        req = requests.post(f"{self.API_URL}/search_chats", headers=self.HEADERS, json=data)
+        return req.json()
+
+
+    @require_authentication
+    def get_chat_messages(self, chat_id):
+        """ (Clubhouse, str) -> dict
+
+        Get events for the specific user.
+        """
+        req = requests.get(f"{self.API_URL}/get_chat_messages?chat_id={chat_id}", headers=self.HEADERS)
+        return req.json()
+
+
+    @require_authentication
+    def create_chat(self, participant_ids):
+        """ (Clubhouse, list) -> dict
+
+        Get events for the specific user.
+        """
+        data = {
+            "source": 4,
+            "participant_ids": participant_ids
+        }
+        req = requests.post(f"{self.API_URL}/create_chat", headers=self.HEADERS, json=data)
+        return req.json()
+
+
+    @require_authentication
+    def send_chat_message(self, chat_id, message):
+        """ (Clubhouse, list, str) -> dict
+
+        Get events for the specific user.
+        """
+        data = {
+            "chat_id": chat_id,
+            "client_message_id": str(uuid.uuid4()),
+            "message_body": message
+        }
+
+        req = requests.post(f"{self.API_URL}/send_chat_message", headers=self.HEADERS, json=data)
+        return req.json()
+
+
+    @require_authentication
+    def get_backchannel_messages(self, participant_ids):
+        """ (Clubhouse, str, list) -> dict
+
+        Get events for the specific user.
+        """
+        _search = self.search_chats(participant_ids)
+
+        if _search["success"]:
+
+            if len(_search["chats"]) > 0:
+                chat_id = _search["chats"][0]["chat_id"]
+                req = self.get_chat_messages(chat_id)
+
+            else:
+                return "[.] No chat history"
+
+        return req
+
+
+    @require_authentication
+    def send_backchannel_message(self, participant_ids, message):
+        """ (Clubhouse, str, list) -> dict
+
+        Get events for the specific user.
+        """
+        _search = self.search_chats(participant_ids)
+        if _search["success"]:
+
+            if len(_search["chats"]) > 0:
+                chat_id = _search["chats"][0]["chat_id"]
+                req = self.send_chat_message(chat_id, message)
+
+            else:
+                req = self.create_chat(participant_ids)
+                if req["success"]:
+                    chat_id = req["chat_id"]
+                    req = self.send_chat_message(chat_id, message)
+
+        return req
+
+
+
+
+
+
+
