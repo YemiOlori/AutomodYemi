@@ -37,6 +37,7 @@ config_object["GUESTLIST1"] = {
     'Joy': '34765',
     'JULEEN': '167752',
     'just10': '415882',
+    'Kaneema': '300990',
     'LeoRising': '243603',
     'LetaShae': '1724156',
     'Mandiie': '23047',
@@ -51,10 +52,15 @@ config_object["GUESTLIST1"] = {
     'Solar': '298894012'
 }
 
+config_object["PINGLIST"] = {
+    'Deon': '27813',
+    'Disco Doggie': '2350087',
+    'Kaneema': '300990',
+}
 
 
-
-#Write the above sections to config.ini file
-with open('config.ini', 'w') as conf:
-    config_object.write(conf)
-    print("Write successful")
+# Write the above sections to config.ini file
+def get_settings():
+    with open('config.ini', 'w') as conf:
+        config_object.write(conf)
+        print("Write settings successful")
