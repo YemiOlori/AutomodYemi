@@ -180,3 +180,8 @@ Thumbs.db
 venv
 node_modules
 .sass-cache
+
+# Settings Files
+setting.ini
+config.ini
+Automod/mod_config.py
