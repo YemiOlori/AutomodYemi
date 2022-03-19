@@ -11,17 +11,23 @@ config_object["USERINFO"] = {
     'user_id': '541615340'
 }
 
+<<<<<<< HEAD
+=======
 config_object["SOCIALCLUBS"] = {
     'a_social_room': '135293051'
 }
 
+>>>>>>> parent of fcbc52a (Merge branch 'main' of https://github.com/deoncarlette/clubhouse-auto-moderation)
 config_object["MODLIST1"] = {
     'Deon': '27813',
     'Disco Doggie': '2350087'
 }
 
 config_object["GUESTLIST1"] = {
+<<<<<<< HEAD
+=======
     'A.Major': '2991260',
+>>>>>>> parent of fcbc52a (Merge branch 'main' of https://github.com/deoncarlette/clubhouse-auto-moderation)
     'Ab': '291161',
     'Alexis': '409839',
     'Ankit': '1273923840',
@@ -30,9 +36,13 @@ config_object["GUESTLIST1"] = {
     'Bree': '1527064',
     'Brenna': '769545',
     'Bomani': '194113805',
+<<<<<<< HEAD
+    'Cassi': '123012',
+=======
     'Bonnie': '2247221',
     'Cassi': '123012',
     'Chantal': '1801861585',
+>>>>>>> parent of fcbc52a (Merge branch 'main' of https://github.com/deoncarlette/clubhouse-auto-moderation)
     'Danyelle': '24464',
     'Deon': '27813',
     'Destiny': '628404',
@@ -63,7 +73,10 @@ config_object["PINGLIST"] = {
     'Deon': '27813',
     'Disco Doggie': '2350087',
     'Kaneema': '300990',
+<<<<<<< HEAD
+=======
     'Tabitha': '1414736198'
+>>>>>>> parent of fcbc52a (Merge branch 'main' of https://github.com/deoncarlette/clubhouse-auto-moderation)
 }
 
 
