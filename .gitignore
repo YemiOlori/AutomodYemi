@@ -184,4 +184,4 @@ node_modules
 # Settings Files
 setting.ini
 config.ini
-Automod/mod_config.py
+AutoMod/mod_config.py
