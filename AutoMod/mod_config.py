@@ -63,7 +63,9 @@ config_object["PINGLIST"] = {
     'Deon': '27813',
     'Disco Doggie': '2350087',
     'Kaneema': '300990',
-    'Tabitha': '1414736198'
+    'Tabitha': '1414736198',
+    'Bonnie': '2247221',
+
 }
 
 
