@@ -61,7 +61,7 @@ class Clubhouse:
         "CH-AppBuild": f"{API_BUILD_ID}",
         "CH-AppVersion": f"{API_BUILD_VERSION}",
         "User-Agent": f"{API_UA}",
-        "Connection": "keep-alive",
+        "Connection": "close",
         "Content-Type": "application/json; charset=utf-8",
         "Cookie": f"__cfduid={secrets.token_hex(21)}{random.randint(1, 9)}",
 
@@ -1708,7 +1708,6 @@ class Clubhouse:
             "client_message_id": str(uuid.uuid4()),
             "message_body": message
         }
-
         req = requests.post(f"{self.API_URL}/send_chat_message", headers=self.HEADERS, json=data)
         return req.json()
 
@@ -1753,6 +1752,53 @@ class Clubhouse:
                     req = self.send_chat_message(chat_id, message)
 
         return req
+
+    @require_authentication
+    def update_audio_music_mode(self, channel):
+        """ (Clubhouse, str) -> dict
+
+        Get events for the specific user.
+        """
+        data = {
+            "channel": channel,
+            "audio_profile": 11,
+            "is_on_call": False
+        }
+        req = requests.post(f"{self.API_URL}/update_channel_user_status", headers=self.HEADERS, json=data)
+        return req.json()
+
+
+    @require_authentication
+    def add_channel_link(self, channel, link):
+        """ (Clubhouse, str, str) -> dict
+
+        Pin a room link.
+        """
+        data = {
+            "channel": channel,
+            "link": link
+        }
+        req = requests.post(f"{self.API_URL}/add_channel_link", headers=self.HEADERS, json=data)
+        return req.json()
+
+
+    @require_authentication
+    def remove_channel_link(self, channel):
+        """ (Clubhouse, str, str) -> dict
+
+        Remove pinned room link.
+        """
+        channel_info = get_channel(self, channel, channel_id=None)
+        link_id = channel_info['links'][0]['link_id']
+
+        data = {
+            "channel": channel,
+            "link": link_id
+        }
+        req = requests.post(f"{self.API_URL}/remove_channel_link", headers=self.HEADERS, json=data)
+        return req.json()
+
+
 
 
 

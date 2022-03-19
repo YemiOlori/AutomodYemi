@@ -89,12 +89,27 @@ try:
     RTC.initEventHandler(eventHandler)
     # 0xFFFFFFFE will exclude Chinese servers from Agora's servers.
     RTC.initialize(Clubhouse.AGORA_KEY, None, agorartc.AREA_CODE_GLOB & 0xFFFFFFFE)
+
+    audio_recording_device_manager, err = RTC.createAudioRecordingDeviceManager()
+    count = audio_recording_device_manager.getCount()
+    for i in range(count):
+        _audio_device = audio_recording_device_manager.getDevice(i, '', '')
+
+        if 'BlackHole 2ch' in _audio_device[1]:
+            audio_recording_device_manager.setDevice(_audio_device[2])
+            audio_recording_device_manager.setDeviceVolume(50)
+            print('[.] Audio recording device set to BlackHole 2ch.')
+            break
+        else:
+            print('[-] Audio recording device not set.')
+
     # Enhance voice quality
     if RTC.setAudioProfile(
             agorartc.AUDIO_PROFILE_MUSIC_HIGH_QUALITY_STEREO,
             agorartc.AUDIO_SCENARIO_GAME_STREAMING
         ) < 0:
         print("[-] Failed to set the high quality audio profile")
+
 except ImportError:
     RTC = None
 
@@ -216,6 +231,68 @@ def set_interval(interval):
     return decorator
 
 
+@set_interval(300)
+def announcement_5(client=auto_mod_client, channel=None, message=None):
+
+    channel_info = client.get_channel(channel)
+
+    if channel_info['success']:
+        message = "This a test announcement that posts every 5 minutes."
+        client.send_channel_message(channel, message)
+    else:
+        return False
+
+    return True
+
+
+@set_interval(600)
+def announcement_10(client=auto_mod_client, channel=None, message=None):
+
+    channel_info = client.get_channel(channel)
+
+    if channel_info['success']:
+        message = "This a test announcement that posts every 10 minutes."
+        client.send_channel_message(channel, message)
+    else:
+        return False
+
+    return True
+
+
+@set_interval(1800)
+def announcement_30(client=auto_mod_client, channel=None, message=None, message2=None):
+
+    channel_info = client.get_channel(channel)
+
+    if channel_info['success']:
+        client.send_channel_message(channel, message)
+
+        if message2:
+            client.send_channel_message(channel, message2)
+
+    else:
+        return False
+
+    return True
+
+
+@set_interval(3600)
+def announcement_60(client=auto_mod_client, channel=None, message=None, message2=None):
+
+    channel_info = client.get_channel(channel)
+
+    if channel_info['success']:
+        client.send_channel_message(channel, message)
+
+        if message2:
+            client.send_channel_message(channel, message2)
+
+    else:
+        return False
+
+    return True
+
+
 @set_interval(30)
 def _ping_keep_alive(client=auto_mod_client, channel=None):
     """ (str) -> bool
@@ -227,7 +304,7 @@ def _ping_keep_alive(client=auto_mod_client, channel=None):
 
 
 @set_interval(10)
-def _wait_speaker_permission(client=auto_mod_client, channel=None, user=None):
+def _wait_speaker_permission(client=auto_mod_client, channel=None, user=None, music=False):
     """ (str) -> bool
 
     Function that runs when you've requested for a voice permission.
@@ -235,6 +312,8 @@ def _wait_speaker_permission(client=auto_mod_client, channel=None, user=None):
 
     # Check if the moderator allowed your request.
     res_inv = client.accept_speaker_invite(channel, user)
+    if music:
+        RTC.muteLocalAudioStream(mute=False)
     if res_inv['success']:
         return False
 
@@ -384,148 +463,6 @@ def data_dump_client(client=auto_mod_client, channel=None):
     return True
 
 
-# Can this be rewritten more efficently?
-@set_interval(30)
-def _invite_guest(client=auto_mod_client, channel=None, guest_list=guest_list,
-                  mod_list=mod_list, welcomed_list_old=None):
-
-
-    if guest_list:
-
-        channel_info = client.get_channel(channel)
-
-        global active_mod
-        active_mod = True
-
-        if _wait_ping_func:
-            _wait_ping_func.set()
-
-        if channel_info['success']:
-            user_list = channel_info['users']
-
-            invited_list = []
-            modded_list = []
-            welcomed_list = []
-
-            for _user in user_list:
-
-                if _user['user_id'] != client.HEADERS['CH-UserID']:
-
-                    _user_id = _user['user_id']
-                    _user_name = _user['name']
-                    _user_name_first = _user['first_name']
-                    _speaker_status = _user['is_speaker']
-                    _mod_status = _user['is_moderator']
-                    _invite_status = _user['is_invited_as_speaker']
-
-                    if _user_id in guest_list:
-
-                        if _speaker_status is False and _invite_status is False:
-                            client.invite_speaker(channel, _user_id)
-                            invited_list.append(_user_name)
-
-                            message = "Welcome " + _user_name_first + "! 🎉"
-                            client.send_channel_message(channel, message)
-                            welcomed_list.append(_user_name)
-                            welcomed_list_old.append(_user_id)
-
-                    if mod_list:
-
-                        if _user_id in mod_list:
-
-                            if _speaker_status is True and _mod_status is False:
-                                client.make_moderator(channel, _user_id)
-                                modded_list.append(_user_name)
-
-                                if _user_id not in welcomed_list_old:
-                                    message = "Welcome " + _user_name_first + "! 🎉"
-                                    client.send_channel_message(channel, message)
-                                    welcomed_list.append(_user_name)
-                                    welcomed_list_old.append(_user_id)
-
-            if len(invited_list) > 0:
-                print('invited: ' + str(invited_list))
-
-            if len(modded_list) > 0:
-                print('modded: ' + str(modded_list))
-
-            if len(welcomed_list) > 0:
-                print('welcomed: ' + str(welcomed_list))
-
-        else:
-            active_mod = False
-            _wait_funct = _wait_ping(client, active_mod)
-            return False
-
-    return True
-
-
-@set_interval(15)
-def _invite_social_guest(client=auto_mod_client, channel=None, welcomed_list_old=None):
-
-    channel_info = client.get_channel(channel)
-
-    if channel_info['success']:
-
-        global active_mod
-        active_mod = True
-
-        if _wait_ping_func:
-            _wait_ping_func.set()
-
-        user_list = channel_info['users']
-
-        invited_list = []
-        modded_list = []
-        welcomed_list = []
-
-        for _user in user_list:
-
-            if str(_user['user_id']) != client.HEADERS['CH-UserID']:
-
-                _user_id = _user['user_id']
-                _user_name = _user['name']
-                _user_name_first = _user['first_name']
-                _speaker_status = _user['is_speaker']
-                _mod_status = _user['is_moderator']
-                _invite_status = _user['is_invited_as_speaker']
-
-                if _speaker_status is True and _mod_status is False:
-                    client.make_moderator(channel, _user_id)
-                    modded_list.append(_user_name)
-
-                    if _user_id not in welcomed_list_old:
-                        message = "Welcome " + _user_name_first + "! 🎉"
-                        client.send_channel_message(channel, message)
-                        welcomed_list.append(_user_name)
-                        welcomed_list_old.append(_user_id)
-
-                if _speaker_status is False and _invite_status is False:
-                    client.invite_speaker(channel, _user_id)
-                    invited_list.append(_user_name)
-
-                    message = "Welcome " + _user_name_first + "! 🎉"
-                    client.send_channel_message(channel, message)
-                    welcomed_list.append(_user_name)
-                    welcomed_list_old.append(_user_id)
-
-            if len(invited_list) > 0:
-                print('invited: ' + str(invited_list))
-
-            if len(modded_list) > 0:
-                print('modded: ' + str(modded_list))
-
-            if len(welcomed_list) > 0:
-                print('welcomed: ' + str(welcomed_list))
-
-    else:
-        active_mod = False
-        _wait_funct = _wait_ping(client, active_mod)
-        return False
-
-    return True
-
-
 def get_hallway(client, max_limit=30):
 
     # Get channels and print
@@ -581,6 +518,188 @@ def get_hallway(client, max_limit=30):
     return
 
 
+@set_interval(15)
+def _invite_social_guest(client=auto_mod_client, channel=None, welcomed_list_old=None):
+
+    timestamp = datetime.now().isoformat()
+    channel_info = client.get_channel(channel)
+
+    if channel_info['success']:
+
+        user_list = channel_info['users']
+
+        invited_list = []
+        modded_list = []
+        welcomed_list = []
+
+        for _user in user_list:
+
+            _user_id = _user['user_id']
+
+            if str(_user_id) == client.HEADERS['CH-UserID']:
+                client_user_id = _user_id
+                client_mod_status = _user['is_moderator']
+                break
+            else:
+                client_user_id = None
+                client_mod_status = False
+
+        if client_mod_status:
+            for _user in user_list:
+
+                _user_id = _user['user_id']
+
+                if _user_id != client_user_id:
+
+                    _user_name = _user['name']
+                    _user_name_first = _user['first_name']
+                    _speaker_status = _user['is_speaker']
+                    _mod_status = _user['is_moderator']
+                    _invite_status = _user['is_invited_as_speaker']
+
+                    if _speaker_status is True and _mod_status is False:
+                        client.make_moderator(channel, _user_id)
+                        modded_list.append(_user_name)
+
+                        if _user_id not in welcomed_list_old:
+
+                            if _user_id != 1414736198:
+                                message = "Welcome " + _user_name_first + "! 🎉"
+
+                            else:
+                                message = 'Tabi! Hello my love! 😍'
+
+                            client.send_channel_message(channel, message)
+                            welcomed_list.append(_user_name)
+                            welcomed_list_old.append(_user_id)
+
+                            if _user_id == 2247221:
+                                client.send_channel_message(channel, 'First')
+                                client.send_channel_message(channel, 'And furthermore, infinitesimal')
+
+                    if _speaker_status is False and _invite_status is False:
+
+                        client.invite_speaker(channel, _user_id)
+                        invited_list.append(_user_name)
+
+                        if _user_id != 1414736198:
+                            message = "Welcome " + _user_name_first + "! 🎉"
+
+                        else:
+                            message = 'Tabi! Hello my love! 😍'
+
+                        client.send_channel_message(channel, message)
+                        welcomed_list.append(_user_name)
+                        welcomed_list_old.append(_user_id)
+
+                        if _user_id == 2247221:
+                            client.send_channel_message(channel, 'First')
+                            client.send_channel_message(channel, 'And furthermore, infinitesimal')
+
+            if len(invited_list) > 0:
+                print(timestamp + ' invited: ' + str(invited_list))
+
+            if len(modded_list) > 0:
+                print(timestamp + ' modded: ' + str(modded_list))
+
+            if len(welcomed_list) > 0:
+                print(timestamp + ' welcomed: ' + str(welcomed_list))
+
+    else:
+        global active_mod
+        active_mod = False
+        _wait_ping_func = _wait_ping(client, active_mod)
+        return False
+
+    return True
+
+
+# Can this be rewritten more efficently?
+@set_interval(30)
+def _invite_guest(client=auto_mod_client, channel=None, guest_list=guest_list,
+                  mod_list=mod_list, welcomed_list_old=None):
+
+    timestamp = datetime.now().isoformat()
+
+    if guest_list:
+
+        channel_info = client.get_channel(channel)
+
+        if channel_info['success']:
+            user_list = channel_info['users']
+
+            invited_list = []
+            modded_list = []
+            welcomed_list = []
+
+            for _user in user_list:
+
+                _user_id = _user['user_id']
+
+                if str(_user_id) == client.HEADERS['CH-UserID']:
+                    client_user_id = _user_id
+                    client_mod_status = _user['is_moderator']
+                    break
+                else:
+                    client_user_id = None
+                    client_mod_status = False
+
+            if client_mod_status:
+                for _user in user_list:
+
+                    _user_id = _user['user_id']
+
+                    if _user_id != client_user_id:
+
+                        _user_name = _user['name']
+                        _user_name_first = _user['first_name']
+                        _speaker_status = _user['is_speaker']
+                        _mod_status = _user['is_moderator']
+                        _invite_status = _user['is_invited_as_speaker']
+
+                        if _user_id in guest_list:
+
+                            if _speaker_status is False and _invite_status is False:
+                                client.invite_speaker(channel, _user_id)
+                                invited_list.append(_user_name)
+
+                                message = "Welcome " + _user_name_first + "! 🎉"
+                                client.send_channel_message(channel, message)
+                                welcomed_list.append(_user_name)
+                                welcomed_list_old.append(_user_id)
+
+                        if mod_list:
+
+                            if _user_id in mod_list:
+
+                                if _speaker_status is True and _mod_status is False:
+                                    client.make_moderator(channel, _user_id)
+                                    modded_list.append(_user_name)
+
+                                    if _user_id not in welcomed_list_old:
+                                        message = "Welcome " + _user_name_first + "! 🎉"
+                                        client.send_channel_message(channel, message)
+                                        welcomed_list.append(_user_name)
+                                        welcomed_list_old.append(_user_id)
+
+                if len(invited_list) > 0:
+                    print(timestamp + ' invited: ' + str(invited_list))
+
+                if len(modded_list) > 0:
+                    print(timestamp + ' modded: ' + str(modded_list))
+
+                if len(welcomed_list) > 0:
+                    print(timestamp + ' welcomed: ' + str(welcomed_list))
+
+        else:
+            global active_mod
+            active_mod = False
+            _wait_ping_func = _wait_ping(client, active_mod)
+            return False
+
+    return True
+
+
 @set_interval(60)
 def track_room(client=auto_mod_client, channel=None):
 
@@ -590,34 +709,6 @@ def track_room(client=auto_mod_client, channel=None):
 
         _track_func = data_dump_client(client, channel)
 
-    else:
-        return False
-
-    return True
-
-
-@set_interval(300)
-def announcement_5(client=auto_mod_client, channel=None):
-
-    channel_info = client.get_channel(channel)
-
-    if channel_info['success']:
-        message = "This a test announcement that posts every 5 minutes."
-        client.send_channel_message(channel, message)
-    else:
-        return False
-
-    return True
-
-
-@set_interval(600)
-def announcement_10(client=auto_mod_client, channel=None):
-
-    channel_info = client.get_channel(channel)
-
-    if channel_info['success']:
-        message = "This a test announcement that posts every 10 minutes."
-        client.send_channel_message(channel, message)
     else:
         return False
 
@@ -648,7 +739,8 @@ def terminate_room(client=auto_mod_client, channel=None):
         RTC.leaveChannel()
 
     global active_mod
-    active_mod = False
+    if active_mod:
+        active_mod = False
 
     client.leave_channel(channel)
 
@@ -657,51 +749,56 @@ def terminate_room(client=auto_mod_client, channel=None):
     return
 
 
-def mod_room(client=auto_mod_client, channel=None, social=False,
+def mod_room(client=auto_mod_client, channel=None, music=False,
              guest_list=guest_list, mod_list=mod_list):
 
     _client_id = client.HEADERS['CH-UserID']
 
     try:
-        terminate_room(client, channel)
-        _wait_ping_func.set()
-    except:
-        pass
-
-
-    join = client.join_channel(channel)
-    data_dump(client, channel)
-
-    channel_info = client.get_channel(channel)
-
-    # Check for the voice level.
-    if RTC:
-        token = join['token']
-        RTC.setExternalAudioSource(True, 32000, 2)
-        RTC.joinChannel(token, channel, "", int(_client_id))
-        print('[.] Audio Loaded')
-        RTC.muteLocalAudioStream(mute=True)
-        RTC.muteAllRemoteAudioStreams(mute=True)
-        print('[.] Audio Muted')
-
-    else:
-        print("[!] Agora SDK is not installed.")
-        print("    You may not speak or listen to the conversation.")
-
-    if channel_info['success']:
 
         if _wait_ping_func:
             _wait_ping_func.set()
 
-        global active_mod
-        active_mod = True
+        terminate_room(client, channel)
+    except:
+        pass
 
-        client.send_channel_message(channel, "Hello, I'm AutoMod! 🤖 ")
+    join = client.join_channel(channel)
+    data_dump(client, channel)
+    channel_info = client.get_channel(channel)
+
+    if channel_info['success']:
+
+        _creator_id = join['creator_user_profile_id']
+
+        for _user in channel_info['users']:
+            if _creator_id == _user['user_id']:
+                _creator_name = _user['first_name']
+                break
+
+            else:
+                _creator_name = ''
+
+        client.send_channel_message(channel, "🤖 Hello " + _creator_name + "! I'm AutoMod! ")
         # client.send_channel_message(channel, "Hello, I'm AutoMod! I'm an open-source project. "
         #                                      "Visit the link in my next message to access my code.")
 
-        user_list = channel_info['users']
+        data_dump(client, channel)
 
+        # Activate pinging
+        client.active_ping(channel)
+        _ping_func = _ping_keep_alive(client, channel)
+        _wait_func = None
+
+        global active_mod
+        active_mod = True
+
+        if channel_info['is_private']:
+            social = True
+        else:
+            social = False
+
+        user_list = channel_info['users']
         for _user in user_list:
             _user_id = _user['user_id']
             _user_id = str(_user_id)
@@ -712,7 +809,7 @@ def mod_room(client=auto_mod_client, channel=None, social=False,
                 if not auto_bot_user['is_speaker']:
                     client.audience_reply(channel)
                     client.send_channel_message(channel, 'Please invite me to speak and make me a Moderator.')
-                    _wait_func = _wait_speaker_permission(client, channel, _client_id)
+                    _wait_func = _wait_speaker_permission(client, channel, _client_id, music)
                     # _wait_mod_func = _wait_mod_permission(client, channel, user)
 
                 if auto_bot_user['is_speaker'] and not auto_bot_user['is_moderator']:
@@ -722,20 +819,43 @@ def mod_room(client=auto_mod_client, channel=None, social=False,
                     # wait_mod = True
 
         welcomed_list_old = []
+        if social is True:
+
+            _invite_func = _invite_social_guest(client, channel, welcomed_list_old)
+            _dump_func = None
+            music = True
+            message = 'The share url for this room is'
+            message2 = 'https://www.clubhouse.com/room/' + channel
+
+            client.send_channel_message(channel, message)
+            client.send_channel_message(channel, message2)
+            _announce_func = announcement_60(client, channel, message, message2)
 
         if social is False:
             _invite_func = _invite_guest(client, channel, guest_list, mod_list, welcomed_list_old)
             _dump_func = data_dump_client(client, channel)
 
-        if social is True:
-            _invite_func = _invite_social_guest(client, channel, welcomed_list_old)
-            _dump_func = None
+    # Check for the voice level.
+    if RTC:
+        token = join['token']
+        # RTC.setExternalAudioSource(True, 32000, 2)
+        RTC.joinChannel(token, channel, "", int(_client_id))
 
-        # Activate pinging
-        client.active_ping(channel)
-        _ping_func = _ping_keep_alive(client, channel)
-        _wait_func = None
-        # _announce_func = announcement_10(client, channel)
+        if music:
+            RTC.muteLocalAudioStream(mute=False)
+            client.update_audio_music_mode(channel)
+        else:
+            RTC.muteLocalAudioStream(mute=True)
+
+        RTC.muteAllRemoteAudioStreams(mute=True)
+
+        print('[.] Audio Loaded')
+        print('[.] Remote Audio Muted')
+
+    else:
+        print("[!] Agora SDK is not installed.")
+        print("    You may not speak or listen to the conversation.")
+
 
     # if keyboard.is_pressed('q'):  # if key 'q' is pressed
     #     print("You've terminated Auto Mod!")
