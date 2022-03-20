@@ -1,5 +1,5 @@
 """
-cli.py
+auto_mod.py
 
 Sample CLI Clubhouse Client
 
@@ -9,18 +9,19 @@ RTC: For voice communication
 import os
 import sys
 from datetime import datetime
-import pytz
 import threading
 from configparser import ConfigParser
+import json
+
+import pytz
 import keyboard
 from rich.table import Table
 from rich.console import Console
 from rich import box
 import boto3
-import json
 
 from AutoMod.mod_tools import Clubhouse
-import AutoMod.mod_config as mod_config
+
 
 auto_mod_client = Clubhouse()
 tracking_client = boto3.client('s3')
@@ -35,31 +36,56 @@ _wait_ping_func = None
 active_mod = None
 # wait_mod = True
 
-
-
-# Need to figure out how to run "mod_settings" module when app starts
 phone_number = None
 guest_list = None
 mod_list = None
 ping_list = None
+# Load user config settings from AutoMod/mod_config.py
+
 try:
-    mod_config = mod_config.get_settings()
 
-    # Read config.ini file
-    config_object = ConfigParser()
-    config_object.read("config.ini")
+    try:
+        # Write config.ini from AutoMod/
+        import AutoMod.mod_config as mod_config
+    except ModuleNotFoundError:
+        print("[-] 'AutoMod/mod_config.py' not found")
+        print("[-] Create 'AutoMod/mod_config.py' using 'AutoMod/mod_config_template.py'")
+        sys.exit(1)
+    else:
+        mod_config = mod_config.get_settings()
+        config_object = ConfigParser()
 
-    # Get the password
-    userinfo = config_object["USERINFO"]
-    phone_number = userinfo["phone_number"]
-    print("[.] Phone number loaded")
+    try:
+        # Read config.ini
+        config_object.read("config.ini")
+    except AttributeError:
+        print("[-] No 'mod_config.ini' file found in root directory")
+        print("[-] Create mod_config.ini file using AutoMod/mod_config_template.ini file")
+        sys.exit(1)
 
-    # Ask which mod list
-    _mods = config_object["MODLIST1"]
-    mod_list = []
-    for mod in _mods:
-        mod_list.append(_mods[mod])
-    print("[.] Mod list loaded")
+    try:
+        # Get phone number
+        userinfo = config_object["USERINFO"]
+        phone_number = userinfo["phone_number"]
+    except KeyError:
+        print("[-] Phone number not loaded")
+    else:
+        print("[.] Phone number loaded")
+
+    try:
+    # Add user input to ask which mod list
+        _mods = config_object["MODLIST1"]
+        mod_list = []
+        for mod in _mods:
+            mod_list.append(_mods[mod])
+    except KeyError:
+        print("[-] Mod list not loaded")
+
+
+
+
+
+        print("[.] Mod list loaded")
 
     # Ask which guest list
     _guests = config_object["GUESTLIST1"]
@@ -73,11 +99,10 @@ try:
     ping_list = []
     for pinger in _pingers:
         ping_list.append(_pingers[pinger])
-    print("[.] Pings list loaded")
+    print("[.] Ping list loaded")
 
-except: # need more specific exception clause
+except KeyError:
     pass
-
 
 # Set some global variables
 # Figure this out when you're ready to start playing music
@@ -198,7 +223,11 @@ def reload_user(client=auto_mod_client):
             user_device=user_device
         )
 
-        print('[.] Auto Mod Loaded')
+        print('[.] AutoMod loaded')
+
+    else:
+        print('[-] AutoMod not loaded')
+
 
     return client
 
@@ -299,7 +328,11 @@ def _ping_keep_alive(client=auto_mod_client, channel=None):
 
     Continue to ping alive every 30 seconds.
     """
-    client.active_ping(channel)
+    try:
+        client.active_ping(channel)
+    except TimeoutError:
+        return False
+
     return True
 
 
@@ -400,6 +433,8 @@ def data_dump(client=auto_mod_client, channel=None):
             Key=_key,
         )
 
+        print('room dumped')
+
     feed_info = client.get_feed()
     if feed_info['items']:
 
@@ -412,7 +447,7 @@ def data_dump(client=auto_mod_client, channel=None):
             Key=_key,
         )
 
-    print('data dumped')
+        print('feed dumped')
 
     return True
 
@@ -447,7 +482,7 @@ def data_dump_client(client=auto_mod_client, channel=None):
     if feed_info['items']:
 
         _data = json.dumps(feed_info)
-        _key = 'feed' + '_' + time_str + '.json'
+        _key = 'feed' + '_' + timestamp + '.json'
 
         response = s3_client.put_object(
             Body=_data,
@@ -521,8 +556,12 @@ def get_hallway(client, max_limit=30):
 @set_interval(15)
 def _invite_social_guest(client=auto_mod_client, channel=None, welcomed_list_old=None):
 
-    timestamp = datetime.now().isoformat()
-    channel_info = client.get_channel(channel)
+    try:
+        timestamp = datetime.now().isoformat()
+        channel_info = client.get_channel(channel)
+
+    except TimeoutError:
+        return False
 
     if channel_info['success']:
 
@@ -619,11 +658,15 @@ def _invite_social_guest(client=auto_mod_client, channel=None, welcomed_list_old
 def _invite_guest(client=auto_mod_client, channel=None, guest_list=guest_list,
                   mod_list=mod_list, welcomed_list_old=None):
 
-    timestamp = datetime.now().isoformat()
 
     if guest_list:
 
-        channel_info = client.get_channel(channel)
+        try:
+            timestamp = datetime.now().isoformat()
+            channel_info = client.get_channel(channel)
+
+        except TimeoutError:
+            return False
 
         if channel_info['success']:
             user_list = channel_info['users']
@@ -704,13 +747,16 @@ def _invite_guest(client=auto_mod_client, channel=None, guest_list=guest_list,
 def track_room(client=auto_mod_client, channel=None):
 
     join = client.join_channel(channel)
-    if join['users']:
-        data_dump(client, channel)
 
-        _track_func = data_dump_client(client, channel)
-
-    else:
+    try:
+        _joined = join['users']
+    except:
         return False
+    #
+    data_dump(client, channel)
+    print('room dumped')
+
+    _track_func = data_dump_client(client, channel)
 
     return True
 
@@ -745,6 +791,18 @@ def terminate_room(client=auto_mod_client, channel=None):
     client.leave_channel(channel)
 
     print('[.] Auto Mod terminated')
+
+    return
+
+
+def mute_audio():
+    RTC.muteLocalAudioStream(mute=True)
+
+    return
+
+
+def unmute_audio():
+    RTC.muteLocalAudioStream(mute=False)
 
     return
 
