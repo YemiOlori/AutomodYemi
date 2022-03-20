@@ -5,6 +5,11 @@ from configparser import ConfigParser
 #Get the configparser object
 config_object = ConfigParser()
 
+config_object['LOGGER'] ={
+    'file': 'moderation_tools.log',
+    'level': 'INFO'
+}
+
 #Assume we need 2 sections in the config file, let's call them USERINFO and SERVERCONFIG
 config_object["USERINFO"] = {
     'phone_number': '+16418540642',

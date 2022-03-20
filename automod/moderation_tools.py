@@ -12,7 +12,6 @@ import json
 from datetime import datetime
 from configparser import ConfigParser
 
-
 import pytz
 import keyboard
 from rich.table import Table
@@ -23,12 +22,7 @@ import boto3
 from .clubhouse_api import Clubhouse
 from . import globals
 
-logging.basicConfig(filename='moderation_tools.log', filemode='a',
-                    format='%(asctime)s - %(name)s - %(levelname)s - %(message)s',
-                    level=logging.DEBUG)
-
-
-auto_mod_client = Clubhouse()
+client = Clubhouse()
 tracking_client = boto3.client('s3')
 
 _ping_func = None
@@ -45,36 +39,70 @@ phone_number = None
 guest_list = None
 mod_list = None
 ping_list = None
-# Load user config settings from AutoMod/mod_config.py
 
-try:
+# Rewrite this function so that it's not redundant with 'read_config
+def read_user_config(file_path, section):
+    """
+    The function to read the configuration parameters from the relevant section in the config file.
 
-    try:
-        from . import mod_config
-    except ModuleNotFoundError:
-        print("[-] 'automod/mod_config.py' not found")
-        print("[-] Create 'automod/mod_config.py' using 'AutoMod/mod_config_template.py'")
+    :param file_path: the name of the file that will be read.
+    :param section: The section of the file has to be read.
+    :return section_content: Dictionary with the section parameters.
+    :rtype: Dictionary
+    """
+    # create parser and read configuration file
+    parser = ConfigParser()
+    parser.read(file_path)
+
+    section_content = {}
+    if parser.has_section(section):
+        items = parser.items(section)
+        for item in items:
+            section_content[item[0]] = item[1]
     else:
-        mod_config = mod_config.get_settings()
-        config_object = ConfigParser()
+        raise Exception('Error in fetching config in read_config method. {0} not found in \
+         {1}'.format(section, file_path))
 
-    try:
-        # Read config.ini
-        config_object.read("config.ini")
-    except AttributeError:
-        print("[-] No 'mod_config.ini' file found in root directory")
-        print("[-] Create mod_config.ini file using AutoMod/mod_config_template.ini file")
+    return section_content
 
+
+def set_logging_basics(config_dict):
+    """
+    The function to set the logging information.
+    :param config_dict: dictionary with details of configuration
+    :return: None
+    """
+    file = config_dict.get('file')
+    level = config_dict.get('level')
+    logging.basicConfig(filename=file
+                        , filemode='a'
+                        , format='%(asctime)s - %(name)s - %(levelname)s - %(message)s'
+                        , level=level)
+
+# Hardcoding the name of config file and section. This would be part of Global variable file
+MASTER_FILE = 'config.ini'
+LOGGER_SECTION = 'LOGGER'
+logger_details = read_user_config(MASTER_FILE, LOGGER_SECTION)
+set_logging_basics(logger_details)
+
+# Load user config settings from AutoMod/mod_config.py
+try:
+    # Read config.ini
+    config_object = ConfigParser()
+    config_object.read("config.ini")
+except AttributeError:
+    logging.warning("No 'mod_config.ini' file found in root directory")
+    sys.exit(1)
+else:
     try:
         # Get phone number
         userinfo = config_object["USERINFO"]
         phone_number = userinfo["phone_number"]
     except KeyError:
-        print("[-] Phone number not loaded")
+        logging.info("No 'phone_number' in config.ini")
         phone_number = input("[.] Please enter your phone number. (+818043217654) > ")
-
     else:
-        print("[.] Phone number loaded")
+        logging.info("Loaded phone number")
 
     try:
         # Add user input to ask which mod list
@@ -83,33 +111,37 @@ try:
         for mod in _mods:
             mod_list.append(_mods[mod])
     except KeyError:
-        print("[-] Mod list not loaded")
+        logging.info("No 'MODLIST' in config.ini")
     else:
-        print("[.] Mod list loaded")
+        logging.info("Loaded mod list")
 
+    try:
+        # Add user input to ask which guest list
+        _guests = config_object["GUESTLIST1"]
+        guest_list = []
+        for guest in _guests:
+            guest_list.append(_guests[guest])
+    except KeyError:
+        logging.info("No 'GUESTLIST' in config.ini")
+    else:
+        logging.info("Loaded guest list")
 
-    # Ask which guest list
-    _guests = config_object["GUESTLIST1"]
-    guest_list = []
-    for guest in _guests:
-        guest_list.append(_guests[guest])
-    print("[.] Guest list loaded")
-
-    # Ask which ping list
-    _pingers = config_object["PINGLIST"]
-    ping_list = []
-    for pinger in _pingers:
-        ping_list.append(_pingers[pinger])
-    print("[.] Ping list loaded")
-
-except KeyError:
-    pass
+    try:
+        # Ask which ping list
+        _pingers = config_object["PINGLIST"]
+        ping_list = []
+        for pinger in _pingers:
+            ping_list.append(_pingers[pinger])
+    except KeyError:
+        logging.info("No 'PINGLIST' in config.ini")
+    else:
+        logging.info("Loaded ping list")
 
 # Set some global variables
 # Figure this out when you're ready to start playing music
 try:
     import agorartc
-    print("[.] Imported agorartc")
+    logging.info("Imported agorartc")
     RTC = agorartc.createRtcEngineBridge()
     eventHandler = agorartc.RtcEngineEventHandlerBase()
     RTC.initEventHandler(eventHandler)
@@ -124,20 +156,34 @@ try:
         if 'BlackHole 2ch' in _audio_device[1]:
             audio_recording_device_manager.setDevice(_audio_device[2])
             audio_recording_device_manager.setDeviceVolume(50)
-            print('[.] Audio recording device set to BlackHole 2ch.')
+            logging.info("Audio recording device set to BlackHole 2ch")
             break
         else:
-            print('[-] Audio recording device not set.')
+            logging.warning("Audio recording device not set")
 
     # Enhance voice quality
     if RTC.setAudioProfile(
             agorartc.AUDIO_PROFILE_MUSIC_HIGH_QUALITY_STEREO,
             agorartc.AUDIO_SCENARIO_GAME_STREAMING
         ) < 0:
-        print("[-] Failed to set the high quality audio profile")
+        logging.warning("Failed to set the high quality audio profile")
 
 except ImportError:
     RTC = None
+
+
+def read_config(filename='setting.ini'):
+    """ (str) -> dict of str
+
+    Read Config
+    """
+    config = ConfigParser()
+    config.read(filename)
+
+    if "Account" in config:
+        return dict(config['Account'])
+
+    return dict()
 
 
 def write_config(user_id, user_token, user_device, refresh_token, access_token,
@@ -159,26 +205,14 @@ def write_config(user_id, user_token, user_device, refresh_token, access_token,
     return True
 
 
-def read_config(filename='setting.ini'):
-    """ (str) -> dict of str
-
-    Read Config
-    """
-    config = ConfigParser()
-    config.read(filename)
-    if "Account" in config:
-        return dict(config['Account'])
-    return dict()
-
-
-def login(client=auto_mod_client):
+def login(_client):
 
     rc_token = None
 
-    user_phone_number = phone_number if phone_number else \
+    _phone_number = phone_number if phone_number else \
         input("[.] Please enter your phone number. (+818043217654) > ")
 
-    result = client.start_phone_number_auth(user_phone_number)
+    result = _client.start_phone_number_auth(_phone_number)
     if not result['success']:
         print(f"[-] Error occurred during authentication. ({result['error_message']})")
 
@@ -186,16 +220,23 @@ def login(client=auto_mod_client):
     if isinstance(verification_code, int):
         verification_code = str(verification_code)
 
-    result = client.complete_phone_number_auth(user_phone_number, rc_token, verification_code)
+    result = _client.complete_phone_number_auth(_phone_number, rc_token, verification_code)
     if not result['success']:
         print(f"[-] Error occurred during authentication. ({result['error_message']})")
 
     user_id = result['user_profile']['user_id']
     user_token = result['auth_token']
-    user_device = client.HEADERS.get("CH-DeviceId")
+    user_device = _client.HEADERS.get("CH-DeviceId")
     refresh_token = result['refresh_token']
     access_token = result['access_token']
     write_config(user_id, user_token, user_device, refresh_token, access_token)
+
+    logging.info("User ID: " + str(user_id))
+    logging.info("User ID: " + str(user_id))
+    logging.info("User ID: " + str(user_id))
+    logging.info("User ID: " + str(user_id))
+    logging.info("User ID: " + str(user_id))
+    logging.info("User ID: " + str(user_id))
 
     print("[.] Writing configuration file complete.")
 
@@ -935,24 +976,6 @@ def mod_room(client=auto_mod_client, channel=None, music=False,
     #     client.leave_channel(channel)
 
     return
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
 
 
 
