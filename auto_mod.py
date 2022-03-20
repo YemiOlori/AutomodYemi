@@ -21,6 +21,7 @@ from rich import box
 import boto3
 
 from AutoMod.mod_tools import Clubhouse
+import AutoMod.globals
 
 
 auto_mod_client = Clubhouse()
@@ -45,7 +46,6 @@ ping_list = None
 try:
 
     try:
-        # Write config.ini from AutoMod/
         import AutoMod.mod_config as mod_config
     except ModuleNotFoundError:
         print("[-] 'AutoMod/mod_config.py' not found")
