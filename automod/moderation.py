@@ -20,9 +20,8 @@ from rich.console import Console
 from rich import box
 import boto3
 
-from AutoMod.mod_tools import Clubhouse
-import AutoMod.globals
-
+from .clubhouse_api import Clubhouse
+from . import globals
 
 auto_mod_client = Clubhouse()
 tracking_client = boto3.client('s3')
@@ -46,11 +45,10 @@ ping_list = None
 try:
 
     try:
-        import AutoMod.mod_config as mod_config
+        from . import mod_config
     except ModuleNotFoundError:
-        print("[-] 'AutoMod/mod_config.py' not found")
-        print("[-] Create 'AutoMod/mod_config.py' using 'AutoMod/mod_config_template.py'")
-        sys.exit(1)
+        print("[-] 'automod/mod_config.py' not found")
+        print("[-] Create 'automod/mod_config.py' using 'AutoMod/mod_config_template.py'")
     else:
         mod_config = mod_config.get_settings()
         config_object = ConfigParser()
@@ -61,7 +59,6 @@ try:
     except AttributeError:
         print("[-] No 'mod_config.ini' file found in root directory")
         print("[-] Create mod_config.ini file using AutoMod/mod_config_template.ini file")
-        sys.exit(1)
 
     try:
         # Get phone number
@@ -69,23 +66,21 @@ try:
         phone_number = userinfo["phone_number"]
     except KeyError:
         print("[-] Phone number not loaded")
+
     else:
         print("[.] Phone number loaded")
 
     try:
-    # Add user input to ask which mod list
+        # Add user input to ask which mod list
         _mods = config_object["MODLIST1"]
         mod_list = []
         for mod in _mods:
             mod_list.append(_mods[mod])
     except KeyError:
         print("[-] Mod list not loaded")
-
-
-
-
-
+    else:
         print("[.] Mod list loaded")
+
 
     # Ask which guest list
     _guests = config_object["GUESTLIST1"]
