@@ -1,17 +1,17 @@
 """
-auto_mod.py
-
-Sample CLI Clubhouse Client
+moderation_tools.py
 
 RTC: For voice communication
 """
 
 import os
 import sys
-from datetime import datetime
+import logging
 import threading
-from configparser import ConfigParser
 import json
+from datetime import datetime
+from configparser import ConfigParser
+
 
 import pytz
 import keyboard
@@ -22,6 +22,11 @@ import boto3
 
 from .clubhouse_api import Clubhouse
 from . import globals
+
+logging.basicConfig(filename='moderation_tools.log', filemode='a',
+                    format='%(asctime)s - %(name)s - %(levelname)s - %(message)s',
+                    level=logging.DEBUG)
+
 
 auto_mod_client = Clubhouse()
 tracking_client = boto3.client('s3')
@@ -66,6 +71,7 @@ try:
         phone_number = userinfo["phone_number"]
     except KeyError:
         print("[-] Phone number not loaded")
+        phone_number = input("[.] Please enter your phone number. (+818043217654) > ")
 
     else:
         print("[.] Phone number loaded")

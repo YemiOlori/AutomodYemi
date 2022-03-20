@@ -182,7 +182,9 @@ node_modules
 .sass-cache
 
 # Settings Files
-AutoMod/setting.ini
-AutoMod/config.ini
-AutoMod/mod_config.py
+automod/setting.ini
+automod/config.ini
+automod/mod_config.py
+automod/moderation_tools.log
 
+setting.ini
