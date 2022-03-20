@@ -33,7 +33,7 @@ _wait_mod_func = None
 _announce_func = None
 _wait_ping_func = None
 _ping_active_func = None
-# wait_mod = True
+welcomed_list_old = []
 
 phone_number = None
 guest_list = None
@@ -209,7 +209,7 @@ def write_config(user_id, user_token, user_device, refresh_token, access_token,
     return True
 
 
-def login(client=auto_mod_client):
+def auto_login(client=auto_mod_client):
     """
     A function to login to Clubhouse.
 
@@ -251,7 +251,7 @@ def login(client=auto_mod_client):
     return client
 
 
-def reload_user(client=auto_mod_client):
+def auto_reload_user(client=auto_mod_client):
     """
     A function to reload Clubhouse client from previous session.
 
@@ -308,7 +308,7 @@ def set_interval(interval, _client=None, _channel=None, _message=None):
 
 
 @set_interval(30)
-def _ping_keep_alive(client, channel=None):
+def auto_ping_keep_alive(client, channel=None):
     """ (str) -> bool
 
     Continue to ping alive every 30 seconds.
@@ -316,13 +316,14 @@ def _ping_keep_alive(client, channel=None):
     try:
         client.active_ping(channel)
     except TimeoutError:
-        return False
+        logging.info(f"TimeoutError: auto_ping_keep_alive")
+        pass
 
     return True
 
 
 # Figure out how to input the announcement interval
-def set_announcement(client, channel, message, interval):
+def auto_set_announcement(client, channel, message, interval):
 
     @set_interval(interval, _client=client, _channel=channel, _message=message)
     def announcement(_client, _channel, _message):
@@ -332,9 +333,11 @@ def set_announcement(client, channel, message, interval):
         if channel_info['success']:
             if isinstance(message, str):
                 client.send_channel_message(channel, message)
+                logging.info(f"Sent channel message: {message}")
             if isinstance(message, list):
                 for m in message:
                     client.send_channel_message(channel, m)
+                    logging.info(f"Sent channel message: {message}")
         else:
             return False
 
@@ -404,7 +407,7 @@ def set_announcement(client, channel, message, interval):
 
 
 @set_interval(10)
-def _wait_speaker_permission(client, channel, user, music=False):
+def auto_wait_speaker_permission(client, channel, user, music=False):
     """ (str) -> bool
 
     Function that runs when you've requested for a voice permission.
@@ -425,88 +428,89 @@ def _wait_speaker_permission(client, channel, user, music=False):
     return True
 
 
-# @set_interval(10)
-# def _wait_mod_permission(_client, channel=None, user=None):
-#     """ (str) -> bool
-#
-#     Function that runs when you've requested for a voice permission.
-#     """
-#
-#     # Check if the moderator allowed your request.
-#     channel_info = _client.get_channel(channel)
-#     if channel_info['success']:
-#         user_list = channel_info['users']
-#         for _user in user_list:
-#             if _user['user_id'] == user:
-#                 if _user['is_moderator']:
-#                     global wait_mod
-#                     wait_mod = False
-#                     return False
-#
-#     return True
+def data_dump(dump, source, channel=""):
 
+    dump_loaded = False
+    log = f"Successfully dumped {source} {channel}"
 
-def data_dump(data, key):
+    if source == 'feed':
+        if dump['items']:
+            data = dump
+            key = source
+            dump_loaded = True
+        else:
+            log = dump
 
-    s3_client = boto3.client('s3')
-    bucket = 'iconicbucketch'
-    timestamp = datetime.now(pytz.timezone('UTC')).isoformat()
-    data = json.dumps(data)
-    key = f"{key}_{timestamp}.json"
-    # key = key + '_' + timestamp + '.json'
+    elif source == 'channel':
+        if dump['success']:
+            data = dump
+            key = f"channel_{dump['channel']}"
+            dump_loaded = True
+        else:
+            log = dump
 
-    s3_client.put_object(
-        Body=data,
-        Bucket=bucket,
-        Key=key,
-    )
+    elif source == 'join':
+        if dump['users']:
+            data = dump
+            key = f"join_{dump['channel']}"
+            dump_loaded = True
+        else:
+            log = dump
+
+    else:
+        data = dump
+        key = "unrecognized"
+        dump_loaded = True
+        log = f"Dumping from {source} not recognized"
+
+    if dump_loaded:
+        s3_client = boto3.client('s3')
+        data = json.dumps(data)
+        bucket = 'iconicbucketch'
+        timestamp = datetime.now(pytz.timezone('UTC')).isoformat()
+        key = f"{key}_{timestamp}.json"
+
+        s3_client.put_object(
+            Body=data,
+            Bucket=bucket,
+            Key=key,
+        )
+
+    logging.info(log)
 
     return
-
-
-def data_dump_channel(client, channel):
-    channel_info = client.get_channel(channel)
-    if channel_info['success']:
-        channel_name = channel_info['channel']
-        data = channel_info
-        key = channel_name
-
-        data_dump(data, key)
-        logging.info("Successful channel dump")
-
-    else:
-        logging.info("Failed channel dumped")
-        return False
-
-    return True
-
-
-def data_dump_feed(client):
-    feed_info = client.get_feed()
-    if feed_info['items']:
-        data = feed_info
-        key = 'feed'
-
-        data_dump(data, key)
-        logging.info("Successful feed dump")
-
-    else:
-        logging.info("Failed feed dumped")
-        return False
-
-    return True
 
 
 @set_interval(60)
-def data_dump_client(client, channel):
+def auto_data_dump_client(client, channel):
 
-    data_dump_channel(client, channel)
-    data_dump_feed(client)
+    feed_info = client.get_feed()
+    channel_info = client.get_channel(channel)
+
+    data_dump(feed_info, 'feed')
+    data_dump(channel_info, 'channel', channel)
 
     return
 
+@set_interval(60)
+def track_room(client, channel=None):
 
-def get_hallway(client, max_limit=30):
+    join = client.join_channel(channel)
+
+    try:
+        _joined = join['users']
+    except:
+        return False
+    #
+    data_dump_channel(client, channel)
+    print('room dumped')
+
+    _track_func = data_dump_client(client, channel)
+
+    return True
+
+
+def auto_get_hallway(client, max_limit=30):
 
     # Get channels and print
     console = Console(width=180)
@@ -561,194 +565,207 @@ def get_hallway(client, max_limit=30):
     return
 
 
-@set_interval(15)
-def _invite_social_guest(client, channel, welcomed_list_old=None):
+# Split function ino listen and respond
+@set_interval(30)
+def auto_listen_channel_ping(client, active_mod, ping_list=ping_list):
+    """ (str) `-> bool
 
-    timestamp = datetime.now().isoformat()
-    channel_info = 'No channel info'
-    try:
-        channel_info = client.get_channel(channel)
-    except TimeoutError:
-        logging.info(channel_info)
-        return False
+    Function that runs when idle.
+    """
 
-    if channel_info['success']:
+    # If not active mod
+    # Is this redundant with active mod?
 
-        user_list = channel_info['users']
+    # Check for ping.
+    response_dict = {'respond': False}
 
-        for _user in user_list:
-            _user_id = _user['user_id']
-
-            if str(_user_id) == client.HEADERS['CH-UserID']:
-                client_user_id = _user_id
-                client_mod_status = _user['is_moderator']
-                break
-            else:
-                client_user_id = None
-                client_mod_status = False
-
-        if client_mod_status:
-            logging.info('AutoMod is a moderator')
-
-            for _user in user_list:
-
-                _user_id = _user['user_id']
-
-                if _user_id != client_user_id:
-
-                    _user_name = _user['name']
-                    _user_name_first = _user['first_name']
-                    _speaker_status = _user['is_speaker']
-                    _mod_status = _user['is_moderator']
-                    _invite_status = _user['is_invited_as_speaker']
-
-                    if _speaker_status is True and _mod_status is False:
-                        client.make_moderator(channel, _user_id)
-                        logging.info(f"AutoMod made {_user_name} a moderator")
-
-                        if _user_id not in welcomed_list_old:
-                            logging.info(f"{_user_name} has not yet been welcomed")
-
-                            if _user_id != 1414736198:
-                                message = "Welcome " + _user_name_first + "! 🎉"
-
-                            else:
-                                message = 'Tabi! Hello my love! 😍'
-                                logging.info('Sent Tabitha welcome message')
-
-                            client.send_channel_message(channel, message)
-                            logging.info(f"AutoMod welcomed {_user_name}")
-
-                            if _user_id == 2247221:
-                                client.send_channel_message(channel, 'First')
-                                client.send_channel_message(channel, 'And furthermore, infinitesimal')
-                                logging.info('Sent Bonnie welcome message')
-
-                    if _speaker_status is False and _invite_status is False:
-
-                        client.invite_speaker(channel, _user_id)
-                        logging.info(f"AutoMod invited {_user_name} to speak")
-
-                        if _user_id != 1414736198:
-                            message = "Welcome " + _user_name_first + "! 🎉"
-
-                        else:
-                            message = 'Tabi! Hello my love! 😍'
-                            logging.info('Sent Tabitha welcome message')
-
-                        client.send_channel_message(channel, message)
-                        logging.info(f"AutoMod welcomed {_user_name}")
-
-                        if _user_id == 2247221:
-                            client.send_channel_message(channel, 'First')
-                            client.send_channel_message(channel, 'And furthermore, infinitesimal')
-                            logging.info('Sent Bonnie welcome message')
+    if active_mod:
+        logging.info(f"AutoBot is actively moderating a room")
 
     else:
-        global active_mod
-        active_mod = False
-        logging.info("Changed active_mod to False")
-        global _wait_ping_func
-        _wait_ping_func = listen_channel_ping(client, active_mod)
-        logging.info('Enabled listen_channel_ping')
-        return False
+        notifications = client.get_notifications()
+        for notification in notifications['notifications']:
+            if notification['type'] == 9:
+                _user_id = str(notification['user_profile']['user_id'])
+                _channel = notification['channel']
+                _message = notification['message']
 
-    return True
+                time_created = notification['time_created']
+                time_created = datetime.strptime(time_created, '%Y-%m-%dT%H:%M:%S.%f%z')
+                time_now = datetime.now(pytz.timezone('UTC'))
+                time_diff = time_now - time_created
+                time_diff = time_diff.total_seconds()
+
+                if time_diff < 30 and _user_id in ping_list:
+                    response = True
+                else:
+                    response = False
+
+                response_dict = {
+                    'respond': response,
+                    'channel': _channel,
+                    'message': _message,
+                }
+
+                logging.info(f"AutoMod pinged to {_channel} - {_message}")
+
+                break
+
+    return response_dict
 
 
-# Can this be rewritten more efficently?
-@set_interval(30)
-def _invite_guest(client, channel=None, guest_list=guest_list,
-                  mod_list=mod_list, welcomed_list_old=None):
+def auto_get_channel_status(client, channel):
 
-    if guest_list:
+    response_dict = {
+        'client_info': None,
+        'channel_info': None,
+        'user_info': None,
+    }
 
-        try:
-            timestamp = datetime.now().isoformat()
-            channel_info = client.get_channel(channel)
+    try:
+        channel_info = client.get_channel(channel)
 
-        except TimeoutError:
-            return False
+    except TimeoutError:
+        logging.info('No channel info retrieved')
 
-        if channel_info['success']:
-            user_list = channel_info['users']
+    else:
+        if not channel_info['success']:
 
-            for _user in user_list:
+            global active_mod
+            active_mod = False
+            logging.info("Changed active_mod to False")
 
+            global _wait_ping_func
+            _wait_ping_func = auto_listen_channel_ping(client, active_mod)
+            logging.info('Enabled auto_listen_channel_ping')
+
+        else:
+            i = 0
+            user_info = channel_info.pop('users')
+            for _user in user_info:
                 _user_id = _user['user_id']
 
                 if str(_user_id) == client.HEADERS['CH-UserID']:
-                    client_user_id = _user_id
-                    client_mod_status = _user['is_moderator']
+
+                    _client = user_info.pop(i)
+
+                    response_dict['client_info'] = _client
+                    response_dict['channel_info'] = channel_info
+                    response_dict['user_info'] = user_info
+
                     break
-                else:
-                    client_user_id = None
-                    client_mod_status = False
 
-            if client_mod_status:
-                for _user in user_list:
+                i += 1
 
-                    _user_id = _user['user_id']
-
-                    if _user_id != client_user_id:
-
-                        _user_name = _user['name']
-                        _user_name_first = _user['first_name']
-                        _speaker_status = _user['is_speaker']
-                        _mod_status = _user['is_moderator']
-                        _invite_status = _user['is_invited_as_speaker']
-
-                        if _user_id in guest_list:
-
-                            if _speaker_status is False and _invite_status is False:
-                                client.invite_speaker(channel, _user_id)
-                                logging.info(f"AutoMod invited {_user_name} to speak")
-
-                                message = "Welcome " + _user_name_first + "! 🎉"
-                                client.send_channel_message(channel, message)
-                                logging.info(f"AutoMod welcomed {_user_name}")
-
-                        if mod_list:
-
-                            if _user_id in mod_list:
-
-                                if _speaker_status is True and _mod_status is False:
-                                    client.make_moderator(channel, _user_id)
-                                    logging.info(f"AutoMod made {_user_name} a moderator")
-
-                                    if _user_id not in welcomed_list_old:
-                                        message = "Welcome " + _user_name_first + "! 🎉"
-                                        client.send_channel_message(channel, message)
-                                        welcomed_list_old.append(_user_id)
-                                        logging.info(f"AutoMod welcomed {_user_name}")
+    return response_dict
 
 
-        else:
-            global active_mod
-            active_mod = False
-            global _wait_ping_func
-            _wait_ping_func = listen_channel_ping(client, active_mod)
-            return False
+def auto_send_message(client, channel, message):
 
-    return True
+    if isinstance(message, str):
+        client.send_channel_message(channel, message)
+
+    if isinstance(message, list):
+        for m in message:
+            client.send_channel_message(channel, m)
+
+    return
 
 
-@set_interval(60)
-def track_room(client, channel=None):
+def auto_welcome_guests(client, channel, user):
 
-    join = client.join_channel(channel)
+    name = user['first_name']
+    message = f"Welcome {name}! 🎉"
 
-    try:
-        _joined = join['users']
-    except:
-        return False
-    #
-    data_dump_channel(client, channel)
-    print('room dumped')
+    if user['user_id'] == 1414736198:
+        message = 'Tabi! Hello my love! 😍'
+        logging.info('Compiled Tabitha welcome message')
 
-    _track_func = data_dump_client(client, channel)
+    if user['user_id'] == 2247221:
+        message_2 = 'First'
+        message_3 = 'And furthermore, infinitesimal'
+        message = [message, message_2, message_3]
+        logging.info('Compiled Bonnie welcome message')
 
-    return True
+    auto_send_message(client, channel, message)
+    logging.info(f"AutoMod welcomed {name}")
+
+    global welcomed_list_old
+    welcomed_list_old.append(user['user_id'])
+
+    return
+
+
+def auto_invite_guests(client, channel, user):
+    if not user['is_speaker'] and not user['is_invited_as_speaker']:
+        client.invite_speaker(channel, user['user_id'])
+        logging.info(f"AutoMod invited {user['name']} to speak")
+
+        auto_welcome_guests(client, channel, user['user_id'])
+
+    return
+
+
+def auto_mod_guests(client, channel, user):
+    if user['is_speaker'] and not user['is_moderator']:
+        client.make_moderator(channel, user['user_id'])
+        logging.info(f"AutoMod made {user['name']} a moderator")
+
+        if user not in welcomed_list_old:
+            auto_welcome_guests(client, channel, user)
+
+    return
+
+
+dump_clock = 0
+@set_interval(15)
+def auto_mod_channel(client, channel):
+
+    channel_dict = auto_get_channel_status(client, channel)
+    client_mod_status = channel_dict['client_info']['client_mod_status']
+    channel_info = channel_dict['channel_info']
+    user_info = channel_dict['user_info']
+
+    if not channel_info['success']:
+        response = False
+
+    else:
+        for _user in user_info:
+            _user_id = user_info['user_id']
+
+            if channel_info['is_social_mode']:
+                if _user_id not in welcomed_list_old:
+                    auto_welcome_guests(client, channel, _user)
+
+            elif channel_info['is_private']:
+                if client_mod_status:
+                    auto_invite_guests(client, channel, _user)
+                    auto_mod_guests(client, channel, _user)
+
+            else:
+                if client_mod_status and guest_list:
+                    if _user_id in guest_list:
+                        auto_invite_guests(client, channel, _user)
+
+                if client_mod_status and mod_list:
+                    if _user_id in mod_list:
+                        auto_mod_guests(client, channel, _user)
+
+        if not channel_info['is_social_mode'] and not channel_info['is_private']:
+            global dump_clock
+            if dump_clock >= 5:
+                dump_clock = 0
+
+                feed_info = client.get_feed()
+                data_dump(feed_info, 'feed')
+                data_dump(channel_info, 'channel', channel)
+
+            dump_clock += 1
+
+        response = True
+
+    return response
+
 
 
 def terminate_room(client, channel=None):
@@ -905,69 +922,182 @@ def mod_room(client, channel=None, music=False,
         print("[!] Agora SDK is not installed.")
         print("    You may not speak or listen to the conversation.")
 
-
-    # if keyboard.is_pressed('q'):  # if key 'q' is pressed
-    #     print("You've terminated Auto Mod!")
-    #
-    #     if _ping_func:
-    #         _ping_func.set()
-    #
-    #     if _wait_func:
-    #         _wait_func.set()
-    #
-    #     if _dump_func:
-    #         _dump_func.set()
-    #
-    #     if RTC:
-    #         RTC.leaveChannel()
-    #
-    #
-    #     client.leave_channel(channel)
-
     return
 
 
-@set_interval(30)
-def listen_channel_ping(client, active_mod=active_mod, ping_list=ping_list):
-    """ (str) `-> bool
+# @set_interval(15)
+# def _invite_social_guest(client, channel, welcomed_list_old=None):
+#
+#     channel_info = 'No channel info'
+#     try:
+#         channel_info = client.get_channel(channel)
+#
+#     except TimeoutError:
+#         logging.info(channel_info)
+#
+#     else:
+#         if channel_info['success']:
+#             private = channel_info['is_private']
+#             social = channel_info['is_social_mode']
+#
+#
+#
+#         user_list = channel_info['users']
+#
+#         for _user in user_list:
+#             _user_id = _user['user_id']
+#
+#             if str(_user_id) == client.HEADERS['CH-UserID']:
+#                 client_user_id = _user_id
+#                 client_mod_status = _user['is_moderator']
+#                 break
+#             else:
+#                 client_user_id = None
+#                 client_mod_status = False
+#
+#         if client_mod_status:
+#             logging.info('AutoMod is a moderator')
+#
+#             for _user in user_list:
+#
+#                 _user_id = _user['user_id']
+#
+#                 if _user_id != client_user_id:
+#
+#                     _user_name = _user['name']
+#                     _user_name_first = _user['first_name']
+#                     _speaker_status = _user['is_speaker']
+#                     _mod_status = _user['is_moderator']
+#                     _invite_status = _user['is_invited_as_speaker']
+#
+#                     if _speaker_status is True and _mod_status is False:
+#                         client.make_moderator(channel, _user_id)
+#                         logging.info(f"AutoMod made {_user_name} a moderator")
+#
+#                         if _user_id not in welcomed_list_old:
+#                             logging.info(f"{_user_name} has not yet been welcomed")
+#
+#                             if _user_id != 1414736198:
+#                                 message = "Welcome " + _user_name_first + "! 🎉"
+#
+#                             else:
+#                                 message = 'Tabi! Hello my love! 😍'
+#                                 logging.info('Sent Tabitha welcome message')
+#
+#                             client.send_channel_message(channel, message)
+#                             logging.info(f"AutoMod welcomed {_user_name}")
+#
+#                             if _user_id == 2247221:
+#                                 client.send_channel_message(channel, 'First')
+#                                 client.send_channel_message(channel, 'And furthermore, infinitesimal')
+#                                 logging.info('Sent Bonnie welcome message')
+#
+#                     if _speaker_status is False and _invite_status is False:
+#
+#                         client.invite_speaker(channel, _user_id)
+#                         logging.info(f"AutoMod invited {_user_name} to speak")
+#
+#                         if _user_id != 1414736198:
+#                             message = "Welcome " + _user_name_first + "! 🎉"
+#
+#                         else:
+#                             message = 'Tabi! Hello my love! 😍'
+#                             logging.info('Sent Tabitha welcome message')
+#
+#                         client.send_channel_message(channel, message)
+#                         logging.info(f"AutoMod welcomed {_user_name}")
+#
+#                         if _user_id == 2247221:
+#                             client.send_channel_message(channel, 'First')
+#                             client.send_channel_message(channel, 'And furthermore, infinitesimal')
+#                             logging.info('Sent Bonnie welcome message')
+#
+#     else:
+#         global active_mod
+#         active_mod = False
+#         logging.info("Changed active_mod to False")
+#         global _wait_ping_func
+#         _wait_ping_func = listen_channel_ping(client, active_mod)
+#         logging.info('Enabled listen_channel_ping')
+#         return False
+#
+#     return True
 
-    Function that runs when idle.
-    """
 
-    # If not active mod
-    if not active_mod:
-
-        # Check for ping.
-        notifications = client.get_notifications()
-
-        for notification in notifications['notifications']:
-            if notification['type'] == 9:
-                _user_id = str(notification['user_profile']['user_id'])
-                _channel = notification['channel']
-                _message = notification['message']
-
-                time_created = notification['time_created']
-                time_created = datetime.strptime(time_created, '%Y-%m-%dT%H:%M:%S.%f%z')
-                time_now = datetime.now(pytz.timezone('UTC'))
-                time_diff = time_now - time_created
-                time_diff = time_diff.total_seconds()
-
-                if time_diff < 30:
-                    if _user_id in ping_list:
-                        logging.info(f"Channel: {_channel} - {_message}")
-                        # logging.info("Channel: " + _channel + " - " _message)
-                        mod_room(client, _channel, True)
-                        return False
-
-    if active_mod:
-        return False
-
-    return True
-
-
-
-
-
-
+# # Can this be rewritten more efficently?
+# @set_interval(30)
+# def _invite_guest2(client, channel=None, guest_list=guest_list,
+#                   mod_list=mod_list, welcomed_list_old=None):
+#
+#     if guest_list:
+#
+#         try:
+#             timestamp = datetime.now().isoformat()
+#             channel_info = client.get_channel(channel)
+#
+#         except TimeoutError:
+#             return False
+#
+#         if channel_info['success']:
+#             user_list = channel_info['users']
+#
+#             for _user in user_list:
+#
+#                 _user_id = _user['user_id']
+#
+#                 if str(_user_id) == client.HEADERS['CH-UserID']:
+#                     client_user_id = _user_id
+#                     client_mod_status = _user['is_moderator']
+#                     break
+#                 else:
+#                     client_user_id = None
+#                     client_mod_status = False
+#
+#             if client_mod_status:
+#                 for _user in user_list:
+#
+#                     _user_id = _user['user_id']
+#
+#                     if _user_id != client_user_id:
+#
+#                         _user_name = _user['name']
+#                         _user_name_first = _user['first_name']
+#                         _speaker_status = _user['is_speaker']
+#                         _mod_status = _user['is_moderator']
+#                         _invite_status = _user['is_invited_as_speaker']
+#
+#                         if _user_id in guest_list:
+#
+#                             if _speaker_status is False and _invite_status is False:
+#                                 client.invite_speaker(channel, _user_id)
+#                                 logging.info(f"AutoMod invited {_user_name} to speak")
+#
+#                                 message = "Welcome " + _user_name_first + "! 🎉"
+#                                 client.send_channel_message(channel, message)
+#                                 logging.info(f"AutoMod welcomed {_user_name}")
+#
+#                         if mod_list:
+#
+#                             if _user_id in mod_list:
+#
+#                                 if _speaker_status is True and _mod_status is False:
+#                                     client.make_moderator(channel, _user_id)
+#                                     logging.info(f"AutoMod made {_user_name} a moderator")
+#
+#                                     if _user_id not in welcomed_list_old:
+#                                         message = "Welcome " + _user_name_first + "! 🎉"
+#                                         client.send_channel_message(channel, message)
+#                                         welcomed_list_old.append(_user_id)
+#                                         logging.info(f"AutoMod welcomed {_user_name}")
+#
+#
+#         else:
+#             global active_mod
+#             active_mod = False
+#             global _wait_ping_func
+#             _wait_ping_func = listen_channel_ping(client, active_mod)
+#             return False
+#
+#     return True
 
 
