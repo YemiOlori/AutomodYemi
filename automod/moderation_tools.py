@@ -20,6 +20,7 @@ from rich import box
 import boto3
 
 from .clubhouse_api import Clubhouse
+from . import moderation_tools_v2 as mod
 from . import globals
 
 auto_mod_client = Clubhouse()
@@ -76,14 +77,16 @@ def set_logging_basics(config_dict):
     """
     file = config_dict.get('file')
     level = config_dict.get('level')
-    logging.basicConfig(filename=file
-                        , filemode='a'
-                        , format='%(asctime)s - %(name)s - %(levelname)s - %(message)s'
-                        , level=level)
+    filemode = config_dict.get('filemode')
+    logging.basicConfig(
+        filename=file,
+        filemode=filemode,
+        format='%(asctime)s - %(name)s - %(levelname)s - %(message)s',
+        level=level)
 
 # Hardcoding the name of config file and section. This would be part of Global variable file
 MASTER_FILE = 'config.ini'
-LOGGER_SECTION = 'LOGGER'
+LOGGER_SECTION = 'Logger'
 logger_details = read_user_config(MASTER_FILE, LOGGER_SECTION)
 set_logging_basics(logger_details)
 
@@ -98,7 +101,7 @@ except AttributeError:
 else:
     try:
         # Get phone number
-        userinfo = config_object["USERINFO"]
+        userinfo = config_object["Account"]
         phone_number = userinfo["phone_number"]
     except KeyError:
         logging.info("No 'phone_number' in config.ini")
@@ -108,34 +111,34 @@ else:
 
     try:
         # Add user input to ask which mod list
-        _mods = config_object["MODLIST1"]
+        _mods = config_object["ModList"]
         mod_list = []
         for mod in _mods:
             mod_list.append(_mods[mod])
     except KeyError:
-        logging.info("No 'MODLIST' in config.ini")
+        logging.info("No 'ModList' in config.ini")
     else:
         logging.info("Loaded mod list")
 
     try:
         # Add user input to ask which guest list
-        _guests = config_object["GUESTLIST1"]
+        _guests = config_object["GuestList"]
         guest_list = []
         for guest in _guests:
             guest_list.append(_guests[guest])
     except KeyError:
-        logging.info("No 'GUESTLIST' in config.ini")
+        logging.info("No 'GuestList' in config.ini")
     else:
         logging.info("Loaded guest list")
 
     try:
         # Ask which ping list
-        _pingers = config_object["PINGLIST"]
+        _pingers = config_object["ApprovedPing"]
         ping_list = []
         for pinger in _pingers:
             ping_list.append(_pingers[pinger])
     except KeyError:
-        logging.info("No 'PINGLIST' in config.ini")
+        logging.info("No 'ApprovedPing' in config.ini")
     else:
         logging.info("Loaded ping list")
 
@@ -209,7 +212,7 @@ def write_config(user_id, user_token, user_device, refresh_token, access_token,
     return True
 
 
-def auto_login(client=auto_mod_client):
+def login(client=auto_mod_client):
     """
     A function to login to Clubhouse.
 
@@ -251,7 +254,7 @@ def auto_login(client=auto_mod_client):
     return client
 
 
-def auto_reload_user(client=auto_mod_client):
+def reload_user(client=auto_mod_client):
     """
     A function to reload Clubhouse client from previous session.
 
@@ -322,26 +325,26 @@ def auto_ping_keep_alive(client, channel=None):
     return True
 
 
-# Figure out how to input the announcement interval
-def auto_set_announcement(client, channel, message, interval):
-
-    @set_interval(interval, _client=client, _channel=channel, _message=message)
-    def announcement(_client, _channel, _message):
-
-        channel_info = client.get_channel(channel)
-
-        if channel_info['success']:
-            if isinstance(message, str):
-                client.send_channel_message(channel, message)
-                logging.info(f"Sent channel message: {message}")
-            if isinstance(message, list):
-                for m in message:
-                    client.send_channel_message(channel, m)
-                    logging.info(f"Sent channel message: {message}")
-        else:
-            return False
-
-        return True
+# # Figure out how to input the announcement interval
+# def auto_set_announcement(client, channel, message, interval):
+#
+#     @set_interval(interval, _client=client, _channel=channel, _message=message)
+#     def announcement(_client, _channel, _message):
+#
+#         channel_info = client.get_channel(channel)
+#
+#         if channel_info['success']:
+#             if isinstance(message, str):
+#                 client.send_channel_message(channel, message)
+#                 logging.info(f"Sent channel message: {message}")
+#             if isinstance(message, list):
+#                 for m in message:
+#                     client.send_channel_message(channel, m)
+#                     logging.info(f"Sent channel message: {message}")
+#         else:
+#             return False
+#
+#         return True
 
 
 # @set_interval(300)
@@ -406,26 +409,26 @@ def auto_set_announcement(client, channel, message, interval):
 #     return True
 
 
-@set_interval(10)
-def auto_wait_speaker_permission(client, channel, user, music=False):
-    """ (str) -> bool
-
-    Function that runs when you've requested for a voice permission.
-    """
-
-    # Check if the moderator allowed your request.
-    res_inv = client.accept_speaker_invite(channel, user)
-    if res_inv['success']:
-        if music:
-            RTC.muteLocalAudioStream(mute=False)
-            logging.info("Enabled local audio stream")
-        else:
-            RTC.muteLocalAudioStream(mute=True)
-            logging.info("Disabled local audio stream")
-
-        return False
-
-    return True
+# @set_interval(10)
+# def auto_wait_speaker_permission(client, channel, user, music=False):
+#     """ (str) -> bool
+#
+#     Function that runs when you've requested for a voice permission.
+#     """
+#
+#     # Check if the moderator allowed your request.
+#     res_inv = client.accept_speaker_invite(channel, user)
+#     if res_inv['success']:
+#         if music:
+#             RTC.muteLocalAudioStream(mute=False)
+#             logging.info("Enabled local audio stream")
+#         else:
+#             RTC.muteLocalAudioStream(mute=True)
+#             logging.info("Disabled local audio stream")
+#
+#         return False
+#
+#     return True
 
 
 def data_dump(dump, source, channel=""):
