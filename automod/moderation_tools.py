@@ -21,23 +21,20 @@ active_mod_thread = None
 announce_thread = None
 wait_speaker_thread = None
 listen_ping_thread = None
-ping_keep_alive_thread = None
 welcomed_list_old = []
 _counter = 0
 
 tracking_client = boto3.client('s3')
 
+
 # Load user config settings from AutoMod/mod_config.py
 # Read config.ini
-
-
 def read_config(section):
     """
     A function to read the config file.
     :param filename: The file to be read.
     :return config: List
     """
-
     config_object = ConfigParser()
     config_object.read("/Users/deon/Documents/GitHub/HQ/config.ini")
 
@@ -60,7 +57,7 @@ client_id = read_config("Account")
 client_id = client_id['user_id']
 
 
-def set_interval(interval, *args, **kwargs):
+def set_interval(interval):
     """
     A function to set the interval decorator.
 
@@ -75,13 +72,13 @@ def set_interval(interval, *args, **kwargs):
                 while not stopped.wait(interval):
                     run = func(*args, **kwargs)
                     if not run:
-                        logging.info(f"moderation_tools_v2.set_interval Stopped: {func}")
+                        logging.info(f"moderation_tools.set_interval Stopped: {func}")
                         break
 
             thread = threading.Thread(target=loop)
             thread.daemon = True
             thread.start()
-            logging.info(f"moderation_tools_v2.set_interval Started: {func}")
+            logging.info(f"moderation_tools.set_interval Started: {func}")
 
             return stopped
 
@@ -327,7 +324,7 @@ def terminate_room(client, channel):
 
     client.leave_channel(channel)
 
-    logging.info("moderation_tools_v2.terminate_room Active mod terminated")
+    logging.info("moderation_tools.terminate_room Active mod terminated")
 
     global listen_ping_thread
     listen_ping_thread = listen_channel_ping(client)
@@ -354,21 +351,21 @@ def mod_channel(client, channel):
         return False
 
     else:
-        logging.info(f"moderation_tools_v2.mod_channel Counter: {_counter}")
+        logging.info(f"moderation_tools.mod_channel Counter: {_counter}")
         client_speaker_status = channel_dict['client_info']['is_speaker']
         client_mod_status = channel_dict['client_info']['is_moderator']
         social_mode = channel_info['is_social_mode']
 
         if active_mod and not client_speaker_status:
             client.accept_speaker_invite(channel, client_id)
-            logging.info("moderation_tools_v2.mod_channel Client is no longer a speaker")
-            logging.info("moderation_tools_v2.mod_channel Client attempted to accept new speaker invitation")
+            logging.info("moderation_tools.mod_channel Client is no longer a speaker")
+            logging.info("moderation_tools.mod_channel Client attempted to accept new speaker invitation")
 
             if client_speaker_status:
-                logging.info("moderation_tools_v2.mod_channel Client accepted new speaker invitation")
+                logging.info("moderation_tools.mod_channel Client accepted new speaker invitation")
 
         elif active_mod and not client_mod_status and not social_mode and _counter == 4:
-            logging.info(f"moderation_tools_v2.mod_channel Client is not a moderator")
+            logging.info(f"moderation_tools.mod_channel Client is not a moderator")
             waiting_mod = True
 
         if waiting_mod and not client_mod_status and not social_mode and _counter == 3:
@@ -494,7 +491,7 @@ def listen_channel_ping(client):
                 if respond:
                     active_mod_channel(client, _channel)
                     logging.info("moderation_tools.listen_channel_ping Triggered active_mod_channel")
-                    break
+                    return False
 
     return True
 
