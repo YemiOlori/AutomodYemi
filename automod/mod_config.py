@@ -26,8 +26,10 @@ config_object["MODLIST1"] = {
 }
 
 config_object["GUESTLIST1"] = {
-    'A.Major': '2991260',
-    'Ab': '291161',
+    ['dsf']: {
+        'A.Major': '2991260',
+        'Ab': '291161',
+    },
     'Alexis': '409839',
     'Ankit': '1273923840',
     'Brandon': '298207',
@@ -61,7 +63,7 @@ config_object["GUESTLIST1"] = {
     'Taii': '4163875',
     'TRP': '47107',
     'Scotty': '12208',
-    'Solar': '298894012'
+    'Solar': '298894012',
 }
 
 config_object["PINGLIST"] = {
@@ -76,6 +78,6 @@ config_object["PINGLIST"] = {
 
 # Write the above sections to config.ini file
 def get_settings():
-    with open('config.ini', 'w') as conf:
+    with open('config_tesr.ini', 'w') as conf:
         config_object.write(conf)
         print("Write settings successful")
