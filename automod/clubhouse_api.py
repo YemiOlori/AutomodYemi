@@ -1060,6 +1060,7 @@ class Clubhouse:
         Search clubs based on the given query.
         """
         data = {
+            "limit_to_object_types":[],
             "cofollows_only": cofollows_only,
             "following_only": following_only,
             "followers_only": followers_only,
@@ -1095,7 +1096,7 @@ class Clubhouse:
         return req.json()
 
     @require_authentication
-    def get_clubs(self, is_startable_only):
+    def get_clubs(self, is_startable_only=False):
         """ (Clubhouse, bool) -> dict
 
         Get list of clubs the user's in.
