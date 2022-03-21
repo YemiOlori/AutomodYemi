@@ -180,7 +180,7 @@ except ImportError:
     RTC = None
 
 
-def read_config(filename='setting.ini'):
+def read_config(filename='/Users/deon/Documents/GitHub/HQ/setting.ini'):
     """ (str) -> dict of str
 
     Read Config
