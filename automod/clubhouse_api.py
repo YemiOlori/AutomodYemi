@@ -786,7 +786,7 @@ class Clubhouse:
             "chanel_id": None
         }
         req = requests.post(f"{self.API_URL}/active_ping", headers=self.HEADERS, json=data)
-        logging.info(f"clubhouse_api.Clubhouse.activePing Pinged {channel}")
+        logging.info(f"clubhouse_api.Clubhouse.activePing Pinged active {channel}")
         return req.json()
 
     # Is this to raise hand or to see how many hands raised?
