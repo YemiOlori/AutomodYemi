@@ -191,5 +191,4 @@ automod/mod_config.py
 automod/moderation_tools.log
 *.ini
 *.log
-automod/mod_config.py
 automod/moderation_tools_v2.py

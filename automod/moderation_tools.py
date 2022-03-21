@@ -75,17 +75,18 @@ def set_logging_basics(config_dict):
     :param config_dict: dictionary with details of configuration
     :return: None
     """
+    folder = config_dict.get('folder')
     file = config_dict.get('file')
     level = config_dict.get('level')
     filemode = config_dict.get('filemode')
     logging.basicConfig(
-        filename=file,
+        filename=f"{folder}{file}",
         filemode=filemode,
         format='%(asctime)s - %(name)s - %(levelname)s - %(message)s',
         level=level)
 
 # Hardcoding the name of config file and section. This would be part of Global variable file
-MASTER_FILE = 'config.ini'
+MASTER_FILE = '/Users/deon/Documents/GitHub/HQ/config.ini'
 LOGGER_SECTION = 'Logger'
 logger_details = read_user_config(MASTER_FILE, LOGGER_SECTION)
 set_logging_basics(logger_details)
@@ -94,7 +95,7 @@ set_logging_basics(logger_details)
 try:
     # Read config.ini
     config_object = ConfigParser()
-    config_object.read("config.ini")
+    config_object.read("/Users/deon/Documents/GitHub/HQ/config.ini")
 except AttributeError:
     logging.warning("No 'mod_config.ini' file found in root directory")
     sys.exit(1)
