@@ -4,7 +4,7 @@
 # pylint: disable=no-self-argument,not-callable
 
 """
-ch_mod.py
+clubhouse_api.py
 """
 
 import uuid
