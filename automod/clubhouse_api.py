@@ -12,6 +12,7 @@ import random
 import secrets
 import functools
 import requests
+import logging
 
 class Clubhouse:
     """
@@ -581,6 +582,7 @@ class Clubhouse:
             # logging_context (json of some details)
         }
         req = requests.post(f"{self.API_URL}/join_channel", headers=self.HEADERS, json=data)
+        logging.info(f"clubhouse_api.Clubhouse.join_channel Joined {channel}")
         return req.json()
 
     @require_authentication
@@ -784,6 +786,7 @@ class Clubhouse:
             "chanel_id": None
         }
         req = requests.post(f"{self.API_URL}/active_ping", headers=self.HEADERS, json=data)
+        logging.info(f"clubhouse_api.Clubhouse.activePing Pinged {channel}")
         return req.json()
 
     # Is this to raise hand or to see how many hands raised?
