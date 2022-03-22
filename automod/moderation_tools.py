@@ -157,7 +157,7 @@ def send_room_chat(client, channel, message):
 # Figure out how to input the announcement interval
 def set_announcement(client, channel, message, interval):
 
-    @set_interval(interval, client, channel, message)
+    @set_interval(interval)
     def announcement(client=client, channel=channel, message=message):
 
         channel_info = client.get_channel(channel)
@@ -233,7 +233,7 @@ def wait_speaker_permission(client, channel, user_id):
     return True
 
 
-def request_speaker_permission(client, channel, channel_dict, join_dict):
+def request_speaker_permission(client, channel, channel_dict, join_dict, mod=True, music=False):
 
     creator_id = join_dict['creator_user_profile_id']
     creator_name = ""
@@ -245,23 +245,32 @@ def request_speaker_permission(client, channel, channel_dict, join_dict):
     message = "🤖 Hello " + creator_name + "! I'm AutoMod! 🎉"
     send_room_chat(client, channel, message)
 
+    channel_info = channel_dict['channel_info']
+
     client_info = channel_dict['client_info']
     logging.info(f"moderation_tools.request_speaker_permission {client_info}")
 
     if not client_info['is_speaker']:
+
         client.audience_reply(channel)
         logging.info("moderation_tools.request_speaker_permission Triggered clubhouse_api.Clubhouse.audience_reply")
 
-        message = "Please invite me to speak and make me a Moderator."
+        if mod:
+            message = "If you'd like to use my features, please invite me to speak and make me a Moderator."
+
+        elif not mod and music:
+            message = "If you'd like to hear music, please invite me to speak."
+
         send_room_chat(client, channel, message)
         global wait_speaker_thread
         wait_speaker_thread = wait_speaker_permission(client, channel, client_id)
         logging.info(f"moderation_tools.request_speaker_permission Triggered message {message}")
 
     if client_info['is_speaker'] and not client_info['is_moderator']:
-        message = 'Please make me a Moderator.'
-        send_room_chat(client, channel, message)
-        logging.info(f"moderation_tools.request_speaker_permission Triggered message {message}")
+        if mod:
+            message = 'Please make me a Moderator.'
+            send_room_chat(client, channel, message)
+            logging.info(f"moderation_tools.request_speaker_permission Triggered message {message}")
 
     return
 
@@ -308,7 +317,7 @@ def mod_guests(client, channel, user):
     return
 
 
-def terminate_room(client, channel):
+def terminate_mod(client, channel):
 
     global active_mod
     active_mod = False
@@ -324,7 +333,7 @@ def terminate_room(client, channel):
 
     client.leave_channel(channel)
 
-    logging.info("moderation_tools.terminate_room Active mod terminated")
+    logging.info("moderation_tools.terminate_mod Active mod terminated")
 
     global listen_ping_thread
     listen_ping_thread = listen_channel_ping(client)
@@ -347,7 +356,7 @@ def mod_channel(client, channel):
         _counter = 0
 
     if not channel_info or not channel_info['success']:
-        terminate_room(client, channel)
+        terminate_mod(client, channel)
         return False
 
     else:
@@ -369,8 +378,8 @@ def mod_channel(client, channel):
             waiting_mod = True
 
         if waiting_mod and not client_mod_status and not social_mode and _counter == 3:
-            terminate_room(client, channel)
-            logging.info("moderation_tools.mod_channel Triggered terminate_room")
+            terminate_mod(client, channel)
+            logging.info("moderation_tools.mod_channel Triggered terminate_mod")
             return False
 
         active_mod = True
@@ -389,11 +398,11 @@ def mod_channel(client, channel):
 
             else:
                 if client_mod_status and guest_list:
-                    if _user_id in guest_list:
+                    if str(_user_id) in guest_list:
                         invite_guests(client, channel, _user)
 
                 if client_mod_status and mod_list:
-                    if _user_id in mod_list:
+                    if str(_user_id) in mod_list:
                         mod_guests(client, channel, _user)
 
         if _counter == 1 or _counter == 3:
@@ -446,7 +455,7 @@ def active_mod_channel(client, channel, announcement=None, interval=3600):
     if listen_ping_thread:
         listen_ping_thread.set()
 
-    return
+    return join_dict
 
 
 @set_interval(30)
