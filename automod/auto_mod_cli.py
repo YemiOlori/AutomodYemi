@@ -119,45 +119,40 @@ phone_number = load_phone_number()
 
 # Set some global variables
 # Figure this out when you're ready to start playing music
-def load_agora():
-    try:
-        import agorartc
-        logging.info("Imported agorartc")
-        RTC = agorartc.createRtcEngineBridge()
-        eventHandler = agorartc.RtcEngineEventHandlerBase()
-        RTC.initEventHandler(eventHandler)
-        # 0xFFFFFFFE will exclude Chinese servers from Agora's servers.
-        RTC.initialize(Clubhouse.AGORA_KEY, None, agorartc.AREA_CODE_GLOB & 0xFFFFFFFE)
 
-        audio_recording_device_manager, err = RTC.createAudioRecordingDeviceManager()
-        count = audio_recording_device_manager.getCount()
+try:
+    import agorartc
+    logging.info("automod.load_agora Imported agorartc")
+    RTC = agorartc.createRtcEngineBridge()
+    eventHandler = agorartc.RtcEngineEventHandlerBase()
+    RTC.initEventHandler(eventHandler)
+    # 0xFFFFFFFE will exclude Chinese servers from Agora's servers.
+    RTC.initialize(Clubhouse.AGORA_KEY, None, agorartc.AREA_CODE_GLOB & 0xFFFFFFFE)
 
-        audio_recording_device_result = False
-        for i in range(count):
-            _audio_device = audio_recording_device_manager.getDevice(i, '', '')
-            if 'BlackHole 2ch' in _audio_device[1]:
-                audio_recording_device_manager.setDevice(_audio_device[2])
-                audio_recording_device_manager.setDeviceVolume(50)
-                audio_recording_device_result = True
-                logging.info("auto_mod_cli.load_agora Audio recording device set to BlackHole 2ch")
-                break
-        if not audio_recording_device_result:
-            logging.warning("auto_mod_cli.load_agora Audio recording device not set")
+    audio_recording_device_manager, err = RTC.createAudioRecordingDeviceManager()
+    count = audio_recording_device_manager.getCount()
 
-        # Enhance voice quality
-        if RTC.setAudioProfile(
-                agorartc.AUDIO_PROFILE_MUSIC_HIGH_QUALITY_STEREO,
-                agorartc.AUDIO_SCENARIO_GAME_STREAMING
-            ) < 0:
-            logging.warning("auto_mod_cli.load_agora Failed to set the high quality audio profile")
+    audio_recording_device_result = False
+    for i in range(count):
+        _audio_device = audio_recording_device_manager.getDevice(i, '', '')
+        if 'BlackHole 2ch' in _audio_device[1]:
+            audio_recording_device_manager.setDevice(_audio_device[2])
+            audio_recording_device_manager.setDeviceVolume(50)
+            audio_recording_device_result = True
+            logging.info("auto_mod_cli.load_agora Audio recording device set to BlackHole 2ch")
+            break
+    if not audio_recording_device_result:
+        logging.warning("auto_mod_cli.load_agora Audio recording device not set")
 
-    except ImportError:
-        RTC = None
+    # Enhance voice quality
+    if RTC.setAudioProfile(
+            agorartc.AUDIO_PROFILE_MUSIC_HIGH_QUALITY_STEREO,
+            agorartc.AUDIO_SCENARIO_GAME_STREAMING
+        ) < 0:
+        logging.warning("auto_mod_cli.load_agora Failed to set the high quality audio profile")
 
-    return RTC
-
-
-RTC = load_agora()
+except ImportError:
+    RTC = None
 
 
 def mute_audio():
@@ -266,9 +261,9 @@ def reload_user(client=auto_mod_client):
             user_token=user_token,
             user_device=user_device
         )
-        logging.info("Loaded AutoMod")
+        logging.info("auto_mod_cli.reload_user Reload client successful")
     else:
-        logging.info("Failed to load AutoMod")
+        logging.info("auto_mod_cli.reload_user Reload client not successful")
 
     return client
 
@@ -301,35 +296,34 @@ def reload_user(client=auto_mod_client):
 #     return decorator
 
 
-# @set_interval(30)
-# def ping_keep_alive(client, channel=None):
-#     """ (str) -> bool
-#
-#     Continue to ping alive every 30 seconds.
-#     """
-#     try:
-#         client.active_ping(channel)
-#     except TimeoutError:
-#         logging.info(f"auto_mod_cli.ping_keep_alive TimeoutError")
-#         pass
-#
-#     return True
+@set_interval(30)
+def ping_keep_alive(client, channel=None):
+    """ (str) -> bool
 
+    Continue to ping alive every 30 seconds.
+    """
+    try:
+        client.active_ping(channel)
+    except TimeoutError:
+        logging.info(f"auto_mod_cli.ping_keep_alive TimeoutError")
+        pass
 
-# @set_interval(60)
-# def data_dump_client(client, channel):
-#
-#     feed_info = client.get_feed()
-#     channel_info = client.get_channel(channel)
-#
-#     mod_tools.data_dump(feed_info, 'feed')
-#     mod_tools.data_dump(channel_info, 'channel', channel)
-#
-#     return
+    return True
+
+@set_interval(60)
+def data_dump_client(client, channel):
+
+    feed_info = client.get_feed()
+    channel_info = client.get_channel(channel)
+
+    mod_tools.data_dump(feed_info, 'feed')
+    mod_tools.data_dump(channel_info, 'channel', channel)
+
+    return
 
 
 @set_interval(60)
-def track_room(client, channel=None):
+def track_room(client, channel):
 
     join = client.join_channel(channel)
 
@@ -337,11 +331,11 @@ def track_room(client, channel=None):
         _joined = join['users']
     except:
         return False
-    #
-    mod_tools.data_dump(join, 'join', channel)
-    print('room dumped')
 
-    _track_func = data_dump_client(client, channel)
+    mod_tools.data_dump(join, 'join', channel)
+
+    channel_info = client.get_channel(channel)
+    mod_tools.data_dump(channel_info, 'channel', channel)
 
     return True
 
@@ -602,40 +596,81 @@ def get_hallway(client, max_limit=30):
 #
 #     return response
 
+def music_room(client, channel, announcement=None, interval=3600, mod=False):
+
+    if mod:
+        join_dict = mod_tools.active_mod_channel(client, channel, announcement, interval)
+
+    else:
+        join_dict = client.join_channel(channel)
+        client.active_ping(channel)
+
+        mod_tools.data_dump(join_dict, 'join', channel)
+
+        channel_dict = mod_tools.get_channel_status(client, channel)
+        if not channel_dict['client_info']['is_speaker']:
+            mod_tools.request_speaker_permission(client, channel, channel_dict, join_dict, mod=False, music=True)
+
+        global _ping_active_func
+        _ping_active_func = ping_keep_alive(client, channel)
+
+        if announcement:
+            mod_tools.set_announcement(client, channel, announcement, interval)
+
+        if not channel_dict['channel_info']['is_social_mode'] and not channel_dict['channel_info']['is_private']:
+            global _dump_func
+            _dump_func = data_dump_client(client, channel)
+
+     # Check for the voice level.
+    if RTC:
+        token = join_dict['token']
+        RTC.joinChannel(token, channel, "", int(mod_tools.client_id))
+
+        RTC.muteLocalAudioStream(mute=False)
+        client.update_audio_music_mode(channel)
+        RTC.muteAllRemoteAudioStreams(mute=True)
+
+        logging.info("auto_mod_cli.music_room RTC audio loaded")
+        logging.info("auto_mod_cli.music_room RTC remote audio muted")
+
+    else:
+        logging.warning("logging.info Agora SDK is not installed.")
+
+    return
 
 
-# def terminate_room(client, channel=None):
-#
-#     if _ping_active_func:
-#         _ping_active_func.set()
-#
-#     if _wait_speak_func:
-#         _wait_speak_func.set()
-#
-#     if _wait_mod_func:
-#         _wait_mod_func.set()
-#
-#     if _dump_func:
-#         _dump_func.set()
-#
-#     if _track_func:
-#         _track_func.set()
-#
-#     if _announce_func:
-#         _announce_func.set()
-#
-#     if RTC:
-#         RTC.leaveChannel()
-#
-#     global active_mod
-#     if active_mod:
-#         active_mod = False
-#
-#     client.leave_channel(channel)
-#
-#     print('[.] Auto Mod terminated')
-#
-#     return
+def terminate_room(client, channel=None):
+
+    if _ping_active_func:
+        _ping_active_func.set()
+
+    if _wait_speak_func:
+        _wait_speak_func.set()
+
+    if _wait_mod_func:
+        _wait_mod_func.set()
+
+    if _dump_func:
+        _dump_func.set()
+
+    if _track_func:
+        _track_func.set()
+
+    if _announce_func:
+        _announce_func.set()
+
+    if RTC:
+        RTC.leaveChannel()
+
+    global active_mod
+    if active_mod:
+        active_mod = False
+
+    client.leave_channel(channel)
+
+    print('[.] Auto Mod terminated')
+
+    return
 
 # def mod_room(client, channel=None, music=False,
 #              guest_list=guest_list, mod_list=mod_list):
