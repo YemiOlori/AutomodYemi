@@ -52,6 +52,8 @@ def read_config(section):
 
 mod_list = read_config("ModList")
 guest_list = read_config("GuestList")
+guest_list_2 = read_config("ASocialRoomGuestList")
+guest_list = guest_list + guest_list_2
 approved_ping_list = read_config("ApprovedPing")
 client_id = read_config("Account")
 client_id = client_id['user_id']
@@ -348,8 +350,8 @@ def mod_channel(client, channel):
     channel_info = channel_dict['channel_info']
 
     user_info = channel_dict['user_info']
-    global waiting_mod
     global active_mod
+    global waiting_mod
     global _counter
 
     if _counter == 5:
@@ -364,6 +366,7 @@ def mod_channel(client, channel):
         client_speaker_status = channel_dict['client_info']['is_speaker']
         client_mod_status = channel_dict['client_info']['is_moderator']
         social_mode = channel_info['is_social_mode']
+        private = channel_info['is_private']
 
         if active_mod and not client_speaker_status:
             client.accept_speaker_invite(channel, client_id)
@@ -391,10 +394,13 @@ def mod_channel(client, channel):
                 if _user_id not in welcomed_list_old:
                     welcome_guests(client, channel, _user)
 
-            elif channel_info['is_private']:
+            elif private:
                 if client_mod_status:
                     invite_guests(client, channel, _user)
                     mod_guests(client, channel, _user)
+
+            elif channel_info['club'] and channel_info['club']['club_id'] == 863466177:
+                invite_guests(client, channel, _user)
 
             else:
                 if client_mod_status and guest_list:
@@ -404,6 +410,11 @@ def mod_channel(client, channel):
                 if client_mod_status and mod_list:
                     if str(_user_id) in mod_list:
                         mod_guests(client, channel, _user)
+
+
+                # elif channel_info['num_all'] < 30 and channel_info['num_ever'] < 500:
+                #     if _user_id not in welcomed_list_old:
+                #     welcome_guests(client, channel, _user)
 
         if _counter == 1 or _counter == 3:
             client.active_ping(channel)
