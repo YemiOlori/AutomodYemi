@@ -27,7 +27,8 @@ def read_config(section):
 
     config_object = config_object[section]
 
-    if section == "Account" or section == "S3":
+    section_list = ["Account", "S3", "RapidAPI"]
+    if section in section_list:
         return dict(config_object)
 
     content_list = []
@@ -53,6 +54,7 @@ class Var:
     welcome_thread = None
 
     already_welcomed_list = []
+    already_in_room_list = []
     counter = 0
 
     mod_list = read_config("ModList")
@@ -62,6 +64,9 @@ class Var:
     client_id = read_config("Account")["user_id"]
 
     s3_bucket = read_config("S3")["bucket"]
+
+    rapid_api_host = read_config("RapidAPI")["host"]
+    rapid_api_key = read_config("RapidAPI")["key"]
 
 
 def set_interval(interval):
@@ -202,7 +207,7 @@ def send_room_chat(client, channel, message):
         client.send_channel_message(channel, message)
         logging.info(f"moderation_tools.send_room_chat Sent channel message: {message}")
 
-    if isinstance(message, list):
+    elif isinstance(message, list):
         for m in message:
             client.send_channel_message(channel, m)
             logging.info(f"moderation_tools.send_room_chat channel message: {m}")
@@ -330,20 +335,27 @@ def request_speaker_permission(client, channel, channel_dict, join_dict, mod=Fal
 
 def welcome_guests(client, channel, user):
 
-    name = user['first_name']
+    name = user["first_name"]
     message = f"Welcome {name}! 🎉"
 
-    if user['user_id'] == 1414736198:
-        message = 'Tabi! Hello my love! 😍'
+    if user["user_id"] == 2350087:
+        message = f"Welcome Disco Doggie! 🎉"
 
-    if user['user_id'] == 2247221:
-        message_2 = 'First'
-        message_3 = 'And furthermore, infinitesimal'
+    elif user["user_id"] == 1414736198:
+        message = "Tabi! Hello my love! 😍"
+
+    elif user["user_id"] == 47107:
+        message_2 = "Ryan, please don't choose violence today!"
+        message = [message, message_2]
+
+    elif user['user_id'] == 2247221:
+        message_2 = "First"
+        message_3 = "And furthermore, infinitesimal"
         message = [message, message_2, message_3]
 
     send_room_chat(client, channel, message)
 
-    Var.already_welcomed_list.append(user['user_id'])
+    Var.already_welcomed_list.append(user)
 
     return
 
@@ -362,9 +374,6 @@ def mod_guests(client, channel, user):
     if user['is_speaker'] and not user['is_moderator']:
         client.make_moderator(channel, user['user_id'])
         logging.info(f"moderation_tools.mod_guest Made {user['name']} a moderator")
-
-        if user not in Var.already_welcomed_list:
-            welcome_guests(client, channel, user)
 
     return
 
@@ -441,16 +450,12 @@ def mod_client(client, channel):
         for _user in user_info:
             user_id = _user['user_id']
 
-            if social_mode:
-                if user_id not in Var.alreay_welcomed_list:
-                    welcome_guests(client, channel, _user)
-
-            elif private:
+            if private:
                 if client_mod_status:
                     invite_guests(client, channel, _user)
                     mod_guests(client, channel, _user)
 
-            elif channel_info['club'] and channel_info['club']['club_id'] == 863466177:
+            elif channel_info['club'] and channel_info['club']['club_id'] == 863466177 or channel_info['club']['club_id'] == 313157294:
                 invite_guests(client, channel, _user)
 
             else:
@@ -462,7 +467,12 @@ def mod_client(client, channel):
                     if str(user_id) in Var.mod_list:
                         mod_guests(client, channel, _user)
 
-        if not channel_info['is_social_mode'] and not channel_info['is_private'] and Var.counter == 4:
+        if social_mode or private:
+            welcome_now = [u for u in user_info if u not in Var.already_welcomed_list and u not in Var.already_in_room_list]
+            for u in welcome_now:
+                welcome_guests(client, channel, u)
+
+        if not social_mode and not private and Var.counter == 4:
             feed_info = client.get_feed()
             data_dump(feed_info, 'feed')
             data_dump(channel_dict, 'channel_dict', channel)
@@ -549,6 +559,9 @@ def automation(client, channel, task=None, announcement=None, interval=3600):
     client.active_ping(channel)
     Var.counter = 0
 
+    Var.already_in_room_list = join_dict['users']
+    logging.info(f"moderation_tools.automation {len(Var.already_in_room_list)} users already in channel")
+
     channel_dict = get_channel_status(client, channel)
     data_dump(channel_dict, 'channel_dict', channel)
 
@@ -633,6 +646,10 @@ def listen_channel_ping(client):
                     return False
 
     return True
+
+
+
+
 
 
 
