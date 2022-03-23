@@ -1733,27 +1733,32 @@ class Clubhouse:
         return req
 
 
+    @require_authentication
+    def get_chat_id(self, participant_ids):
+        chat_id = False
+        _search = self.search_backchannel(participant_ids)
+        if _search["success"]:
+            if len(_search["chats"]) > 0:
+                chat_id = _search["chats"][0]["chat_id"]
+        else:
+            req = self.create_backchannel(participant_ids)
+            if req["success"]:
+                chat_id = req["chat_id"]
+        return chat_id
+
+
     # Check to see if this is correct
     @require_authentication
-    def send_backchannel_message(self, participant_ids, message):
+    def send_backchannel_message(self, message, chat_id=None, participant_ids=None):
         """ (Clubhouse, str, list) -> dict
 
         Get events for the specific user.
         """
-        def get_chat_id(participant_ids):
-            chat_id = False
-            _search = self.search_backchannel(participant_ids)
-            if _search["success"]:
-                if len(_search["chats"]) > 0:
-                    chat_id = _search["chats"][0]["chat_id"]
-            else:
-                req = self.create_backchannel(participant_ids)
-                if req["success"]:
-                    chat_id = req["chat_id"]
-            return chat_id
+        if not chat_id:
+            chat_id = self.get_chat_id(participant_ids)
 
         data = {
-            "chat_id": get_chat_id(participant_ids),
+            "chat_id": chat_id,
             "client_message_id": str(uuid.uuid4()),
             "message_body": message
         }
