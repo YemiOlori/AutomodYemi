@@ -355,7 +355,7 @@ def welcome_guests(client, channel, user):
 
     send_room_chat(client, channel, message)
 
-    Var.already_welcomed_list.append(user)
+    Var.already_welcomed_list.append(user["user_id"])
 
     return
 
@@ -467,10 +467,9 @@ def mod_client(client, channel):
                     if str(user_id) in Var.mod_list:
                         mod_guests(client, channel, _user)
 
-        if social_mode or private:
-            welcome_now = [u for u in user_info if u not in Var.already_welcomed_list and u not in Var.already_in_room_list]
-            for u in welcome_now:
-                welcome_guests(client, channel, u)
+            if social_mode or private:
+                if user_id not in Var.already_welcomed_list and user_id not in Var.already_in_room_list:
+                    welcome_guests(client, channel, _user)
 
         if not social_mode and not private and Var.counter == 4:
             feed_info = client.get_feed()
@@ -559,7 +558,9 @@ def automation(client, channel, task=None, announcement=None, interval=3600):
     client.active_ping(channel)
     Var.counter = 0
 
-    Var.already_in_room_list = join_dict['users']
+    for _user in join_dict['users']:
+        Var.already_in_room_list.append(_user['user_id'])
+
     logging.info(f"moderation_tools.automation {len(Var.already_in_room_list)} users already in channel")
 
     channel_dict = get_channel_status(client, channel)
