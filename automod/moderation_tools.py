@@ -455,8 +455,8 @@ def mod_client(client, channel):
                     invite_guests(client, channel, _user)
                     mod_guests(client, channel, _user)
 
-            elif channel_info['club'] and channel_info['club']['club_id'] == 863466177 or channel_info['club']['club_id'] == 313157294:
-                invite_guests(client, channel, _user)
+            # elif channel_info['club'] and channel_info['club']['club_id'] == 863466177 or channel_info['club']['club_id'] == 313157294:
+            #     invite_guests(client, channel, _user)
 
             else:
                 if client_mod_status and Var.guest_list:
@@ -535,7 +535,7 @@ def welcome_all_client(client, channel):
 
     for _user in user_info:
         user_id = _user["user_id"]
-        if user_id not in Var.alreay_welcomed_list:
+        if user_id not in Var.already_welcomed_list:
             welcome_guests(client, channel, _user)
 
     if not channel_info or not channel_info["success"]:
