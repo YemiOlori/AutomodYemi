@@ -138,6 +138,7 @@ class Clubhouse:
             "phone_number": phone_number
         }
         req = requests.post(f"{self.API_URL}/start_phone_number_auth", headers=self.HEADERS, json=data)
+        logging.info(req)
         return req.json()
 
     @unstable_endpoint
@@ -156,6 +157,7 @@ class Clubhouse:
             "phone_number": phone_number
         }
         req = requests.post(f"{self.API_URL}/resend_phone_number_auth", headers=self.HEADERS, json=data)
+        logging.info(req)
         return req.json()
 
     def complete_phone_number_auth(self, phone_number, rc_token, verification_code):
@@ -175,6 +177,7 @@ class Clubhouse:
             "verification_code": verification_code
         }
         req = requests.post(f"{self.API_URL}/complete_phone_number_auth", headers=self.HEADERS, json=data)
+        logging.info(req)
         return req.json()
 
     def check_for_update(self, is_testflight=False):
@@ -188,6 +191,7 @@ class Clubhouse:
         """
         query = f"is_testflight={int(is_testflight)}"
         req = requests.get(f"{self.API_URL}/check_for_update?{query}", headers=self.HEADERS)
+        logging.info(req)
         return req.json()
 
     @require_authentication
@@ -198,6 +202,7 @@ class Clubhouse:
         """
         data = {}
         req = requests.post(f"{self.API_URL}/logout", headers=self.HEADERS, json=data)
+        logging.info(req)
         return req.json()
 
     @require_authentication
@@ -207,19 +212,19 @@ class Clubhouse:
         Get release notes.
         """
         req = requests.post(f"{self.API_URL}/get_release_notes", headers=self.HEADERS)
+        logging.info(req)
         return req.json()
-
 
     # This is no longer needed
-
-    @require_authentication
-    def check_waitlist_status(self):
-        """ (Clubhouse) -> dict
-
-        Check whether you're still on a waitlist or not.
-        """
-        req = requests.post(f"{self.API_URL}/check_waitlist_status", headers=self.HEADERS)
-        return req.json()
+    # @require_authentication
+    # def check_waitlist_status(self):
+    #     """ (Clubhouse) -> dict
+    #
+    #     Check whether you're still on a waitlist or not.
+    #     """
+    #     req = requests.post(f"{self.API_URL}/check_waitlist_status", headers=self.HEADERS)
+    #     logging.info(req)
+    #     return req.json()
 
     @require_authentication
     def add_email(self, email):
@@ -232,6 +237,7 @@ class Clubhouse:
             "email": email
         }
         req = requests.post(f"{self.API_URL}/add_email", headers=self.HEADERS, json=data)
+        logging.info(req)
         return req.json()
 
     @require_authentication
@@ -247,6 +253,7 @@ class Clubhouse:
         self.HEADERS.pop("Content-Type")
         req = requests.post(f"{self.API_URL}/update_photo", headers=self.HEADERS, files=files)
         self.HEADERS['Content-Type'] = tmp
+        logging.info(req)
         return req.json()
 
     @require_authentication
@@ -263,6 +270,7 @@ class Clubhouse:
             "source": source
         }
         req = requests.post(f"{self.API_URL}/follow", headers=self.HEADERS, json=data)
+        logging.info(req)
         return req.json()
 
     @require_authentication
@@ -275,6 +283,7 @@ class Clubhouse:
             "user_id": int(user_id)
         }
         req = requests.post(f"{self.API_URL}/unfollow", headers=self.HEADERS, json=data)
+        logging.info(req)
         return req.json()
 
     @require_authentication
@@ -291,6 +300,7 @@ class Clubhouse:
             "source": source
         }
         req = requests.post(f"{self.API_URL}/follow_multiple", headers=self.HEADERS, json=data)
+        logging.info(req)
         return req.json()
 
     @require_authentication
@@ -303,6 +313,7 @@ class Clubhouse:
             "user_id": int(user_id)
         }
         req = requests.post(f"{self.API_URL}/block", headers=self.HEADERS, json=data)
+        logging.info(req)
         return req.json()
 
     @require_authentication
@@ -315,6 +326,7 @@ class Clubhouse:
             "user_id": int(user_id)
         }
         req = requests.post(f"{self.API_URL}/unblock", headers=self.HEADERS, json=data)
+        logging.info(req)
         return req.json()
 
     @require_authentication
@@ -328,6 +340,7 @@ class Clubhouse:
             "source_topic_id": source_topic_id
         }
         req = requests.post(f"{self.API_URL}/join_club", headers=self.HEADERS, json=data)
+        logging.info(req)
         return req.json()
 
     @require_authentication
@@ -341,6 +354,7 @@ class Clubhouse:
             "source_topic_id": source_topic_id
         }
         req = requests.post(f"{self.API_URL}/leave_club", headers=self.HEADERS, json=data)
+        logging.info(req)
         return req.json()
 
     @require_authentication
@@ -355,6 +369,7 @@ class Clubhouse:
             "notification_type": int(notification_type)
         }
         req = requests.post(f"{self.API_URL}/update_follow_notifications", headers=self.HEADERS, json=data)
+        logging.info(req)
         return req.json()
 
     @require_authentication
@@ -370,6 +385,7 @@ class Clubhouse:
             "query_result_position": None,
         }
         req = requests.post(f"{self.API_URL}/get_suggested_follows_similar", headers=self.HEADERS, json=data)
+        logging.info(req)
         return req.json()
 
     @require_authentication
@@ -385,6 +401,7 @@ class Clubhouse:
             "contacts": contacts
         }
         req = requests.post(f"{self.API_URL}/get_suggested_follows_friends_only", headers=self.HEADERS, json=data)
+        logging.info(req)
         return req.json()
 
     @require_authentication
@@ -399,6 +416,7 @@ class Clubhouse:
             page
         )
         req = requests.get(f"{self.API_URL}/get_suggested_follows_all?{query}", headers=self.HEADERS)
+        logging.info(req)
         return req.json()
 
     @require_authentication
@@ -411,6 +429,7 @@ class Clubhouse:
             "user_id": int(user_id)
         }
         req = requests.post(f"{self.API_URL}/user_id", headers=self.HEADERS, json=data)
+        logging.info(req)
         return req.json()
 
     @require_authentication
@@ -430,6 +449,7 @@ class Clubhouse:
             # "name": name
         }
         req = requests.post(f"{self.API_URL}/get_event", headers=self.HEADERS, json=data)
+        logging.info(req)
         return req.json()
 
     @require_authentication
@@ -450,6 +470,7 @@ class Clubhouse:
             "name": name
         }
         req = requests.post(f"{self.API_URL}/edit_event", headers=self.HEADERS, json=data)
+        logging.info(req)
         return req.json()
 
     @require_authentication
@@ -469,6 +490,7 @@ class Clubhouse:
             "name": name
         }
         req = requests.post(f"{self.API_URL}/edit_event", headers=self.HEADERS, json=data)
+        logging.info(req)
         return req.json()
 
     @require_authentication
@@ -488,6 +510,7 @@ class Clubhouse:
             "name": name
         }
         req = requests.post(f"{self.API_URL}/delete_event", headers=self.HEADERS, json=data)
+        logging.info(req)
         return req.json()
 
     @require_authentication
@@ -503,6 +526,7 @@ class Clubhouse:
             page
         )
         req = requests.get(f"{self.API_URL}/get_events?{query}", headers=self.HEADERS)
+        logging.info(req)
         return req.json()
 
     @require_authentication
@@ -519,6 +543,7 @@ class Clubhouse:
             "slug": None,
         }
         req = requests.post(f"{self.API_URL}/get_club", headers=self.HEADERS, json=data)
+        logging.info(req)
         return req.json()
 
     @require_authentication
@@ -535,6 +560,7 @@ class Clubhouse:
             page
         )
         req = requests.get(f"{self.API_URL}/get_club_members?{query}", headers=self.HEADERS)
+        logging.info(req)
         return req.json()
 
     @require_authentication
@@ -544,6 +570,7 @@ class Clubhouse:
         Receive user's settings.
         """
         req = requests.get(f"{self.API_URL}/get_settings", headers=self.HEADERS)
+        logging.info(req)
         return req.json()
 
     @require_authentication
@@ -553,6 +580,7 @@ class Clubhouse:
         Seems to be called upon sign up. Does not seem to return much data.
         """
         req = requests.get(f"{self.API_URL}/get_welcome_channel", headers=self.HEADERS)
+        logging.info(req)
         return req.json()
 
     @require_authentication
@@ -567,6 +595,7 @@ class Clubhouse:
             "hide": hide
         }
         req = requests.post(f"{self.API_URL}/hide_channel", headers=self.HEADERS, json=data)
+        logging.info(req)
         return req.json()
 
     @require_authentication
@@ -582,7 +611,7 @@ class Clubhouse:
             # logging_context (json of some details)
         }
         req = requests.post(f"{self.API_URL}/join_channel", headers=self.HEADERS, json=data)
-        logging.info(f"clubhouse_api.Clubhouse.join_channel Joined {channel}")
+        logging.info(req)
         return req.json()
 
     @require_authentication
@@ -595,6 +624,7 @@ class Clubhouse:
             "channel": channel
         }
         req = requests.post(f"{self.API_URL}/leave_channel", headers=self.HEADERS, json=data)
+        logging.info(req)
         return req.json()
 
     @require_authentication
@@ -609,6 +639,7 @@ class Clubhouse:
             "channel_id": channel_id
         }
         req = requests.post(f"{self.API_URL}/make_channel_public", headers=self.HEADERS, json=data)
+        logging.info(req)
         return req.json()
 
     @require_authentication
@@ -623,6 +654,7 @@ class Clubhouse:
             "channel_id": channel_id
         }
         req = requests.post(f"{self.API_URL}/make_channel_social", headers=self.HEADERS, json=data)
+        logging.info(req)
         return req.json()
 
     @require_authentication
@@ -636,6 +668,7 @@ class Clubhouse:
             "channel_id": channel_id
         }
         req = requests.post(f"{self.API_URL}/end_channel", headers=self.HEADERS, json=data)
+        logging.info(req)
         return req.json()
 
     @require_authentication
@@ -649,6 +682,7 @@ class Clubhouse:
             "user_id": int(user_id)
         }
         req = requests.post(f"{self.API_URL}/make_moderator", headers=self.HEADERS, json=data)
+        logging.info(req)
         return req.json()
 
     @require_authentication
@@ -662,6 +696,7 @@ class Clubhouse:
             "user_id": int(user_id)
         }
         req = requests.post(f"{self.API_URL}/block_from_channel", headers=self.HEADERS, json=data)
+        logging.info(req)
         return req.json()
 
     @require_authentication
@@ -677,6 +712,7 @@ class Clubhouse:
             "username": username if username else None
         }
         req = requests.post(f"{self.API_URL}/get_profile", headers=self.HEADERS, json=data)
+        logging.info(req)
         return req.json()
 
     @require_authentication
@@ -691,6 +727,7 @@ class Clubhouse:
             "return_following_ids": return_following_ids
         }
         req = requests.post(f"{self.API_URL}/me", headers=self.HEADERS, json=data)
+        logging.info(req)
         return req.json()
 
     @require_authentication
@@ -705,6 +742,7 @@ class Clubhouse:
             page
         )
         req = requests.get(f"{self.API_URL}/get_following?{query}", headers=self.HEADERS)
+        logging.info(req)
         return req.json()
 
     @require_authentication
@@ -719,6 +757,7 @@ class Clubhouse:
             page
         )
         req = requests.get(f"{self.API_URL}/get_followers?{query}", headers=self.HEADERS)
+        logging.info(req)
         return req.json()
 
     @require_authentication
@@ -733,6 +772,7 @@ class Clubhouse:
             page
         )
         req = requests.get(f"{self.API_URL}/get_mutual_follows?{query}", headers=self.HEADERS)
+        logging.info(req)
         return req.json()
 
     @require_authentication
@@ -742,6 +782,7 @@ class Clubhouse:
         Get list of topics, based on the server's channel selection algorithm
         """
         req = requests.get(f"{self.API_URL}/get_all_topics", headers=self.HEADERS)
+        logging.info(req)
         return req.json()
 
     @require_authentication
@@ -751,6 +792,7 @@ class Clubhouse:
         Get list of channels, current invite status, etc.
         """
         req = requests.get(f"{self.API_URL}/get_feed?", headers=self.HEADERS)
+        logging.info(req)
         return req.json()
 
     # This endpoint may longer work
@@ -761,6 +803,7 @@ class Clubhouse:
         Get list of channels, based on the server's channel selection algorithm
         """
         req = requests.get(f"{self.API_URL}/get_channels", headers=self.HEADERS)
+        logging.info(req)
         return req.json()
 
     @require_authentication
@@ -774,6 +817,7 @@ class Clubhouse:
             "channel_id": channel_id
         }
         req = requests.post(f"{self.API_URL}/get_channel", headers=self.HEADERS, json=data)
+        logging.info(req)
         return req.json()
 
     @require_authentication
@@ -787,7 +831,7 @@ class Clubhouse:
             "chanel_id": None
         }
         req = requests.post(f"{self.API_URL}/active_ping", headers=self.HEADERS, json=data)
-        logging.info(f"clubhouse_api.Clubhouse.activePing Pinged active {channel}")
+        logging.info(req)
         return req.json()
 
     # Is this to raise hand or to see how many hands raised?
@@ -803,6 +847,7 @@ class Clubhouse:
             "unraise_hands": unraise_hands
         }
         req = requests.post(f"{self.API_URL}/audience_reply", headers=self.HEADERS, json=data)
+        logging.info(req)
         return req.json()
 
 
@@ -829,6 +874,7 @@ class Clubhouse:
             "handraise_permission": handraise_permission
         }
         req = requests.post(f"{self.API_URL}/change_handraise_settings", headers=self.HEADERS, json=data)
+        logging.info(req)
         return req.json()
 
     @require_authentication
@@ -844,6 +890,7 @@ class Clubhouse:
             "skintone": skintone
         }
         req = requests.post(f"{self.API_URL}/update_skintone", headers=self.HEADERS, json=data)
+        logging.info(req)
         return req.json()
 
     @require_authentication
@@ -854,6 +901,7 @@ class Clubhouse:
         """
         query = f"page_size={page_size}&page={page}"
         req = requests.get(f"{self.API_URL}/get_notifications?{query}", headers=self.HEADERS)
+        logging.info(req)
         return req.json()
 
     @require_authentication
@@ -863,6 +911,7 @@ class Clubhouse:
         Get notifications. This may return some notifications that require some actions
         """
         req = requests.get(f"{self.API_URL}/get_actionable_notifications", headers=self.HEADERS)
+        logging.info(req)
         return req.json()
 
     @require_authentication
@@ -872,6 +921,7 @@ class Clubhouse:
         List all online friends.
         """
         req = requests.post(f"{self.API_URL}/get_online_friends", headers=self.HEADERS, json={})
+        logging.info(req)
         return req.json()
 
     @require_authentication
@@ -886,6 +936,7 @@ class Clubhouse:
             "user_id": int(user_id)
         }
         req = requests.post(f"{self.API_URL}/accept_speaker_invite", headers=self.HEADERS, json=data)
+        logging.info(req)
         return req.json()
 
     @require_authentication
@@ -899,6 +950,7 @@ class Clubhouse:
             "user_id": int(user_id)
         }
         req = requests.post(f"{self.API_URL}/reject_speaker_invite", headers=self.HEADERS, json=data)
+        logging.info(req)
         return req.json()
 
     @require_authentication
@@ -912,6 +964,7 @@ class Clubhouse:
             "user_id": int(user_id)
         }
         req = requests.post(f"{self.API_URL}/invite_speaker", headers=self.HEADERS, json=data)
+        logging.info(req)
         return req.json()
 
     @require_authentication
@@ -925,6 +978,7 @@ class Clubhouse:
             "user_id": int(user_id)
         }
         req = requests.post(f"{self.API_URL}/uninvite_speaker", headers=self.HEADERS, json=data)
+        logging.info(req)
         return req.json()
 
     @require_authentication
@@ -938,6 +992,7 @@ class Clubhouse:
             "user_id": int(user_id)
         }
         req = requests.post(f"{self.API_URL}/mute_speaker", headers=self.HEADERS, json=data)
+        logging.info(req)
         return req.json()
 
     # What is this?
@@ -951,6 +1006,7 @@ class Clubhouse:
             "channel": channel
         }
         req = requests.post(f"{self.API_URL}/get_suggested_speakers", headers=self.HEADERS, json=data)
+        logging.info(req)
         return req.json()
 
     @require_authentication
@@ -968,6 +1024,7 @@ class Clubhouse:
             "topic": topic
         }
         req = requests.post(f"{self.API_URL}/create_channel", headers=self.HEADERS, json=data)
+        logging.info(req)
         return req.json()
 
 
@@ -980,6 +1037,7 @@ class Clubhouse:
         """
         data = {}
         req = requests.post(f"{self.API_URL}/get_create_channel_targets", headers=self.HEADERS, json=data)
+        logging.info(req)
         return req.json()
 
     @require_authentication
@@ -997,6 +1055,7 @@ class Clubhouse:
             "contacts": contacts
         }
         req = requests.post(f"{self.API_URL}/get_suggested_invites", headers=self.HEADERS, json=data)
+        logging.info(req)
         return req.json()
 
     @require_authentication
@@ -1013,6 +1072,7 @@ class Clubhouse:
             "contacts": contacts
         }
         req = requests.post(f"{self.API_URL}/get_suggested_club_invites", headers=self.HEADERS, json=data)
+        logging.info(req)
         return req.json()
 
     @require_authentication
@@ -1027,6 +1087,7 @@ class Clubhouse:
             "message": message
         }
         req = requests.post(f"{self.API_URL}/invite_to_app", headers=self.HEADERS, json=data)
+        logging.info(req)
         return req.json()
 
     @require_authentication
@@ -1040,6 +1101,7 @@ class Clubhouse:
             "user_id": int(user_id),
         }
         req = requests.post(f"{self.API_URL}/invite_from_waitlist", headers=self.HEADERS, json=data)
+        logging.info(req)
         return req.json()
 
     # No longer works
@@ -1056,6 +1118,7 @@ class Clubhouse:
             "query": query
         }
         req = requests.post(f"{self.API_URL}/search_users", headers=self.HEADERS, json=data)
+        logging.info(req)
         return req.json()
 
     # No longer works
@@ -1073,6 +1136,7 @@ class Clubhouse:
             "query": query
         }
         req = requests.post(f"{self.API_URL}/search_clubs", headers=self.HEADERS, json=data)
+        logging.info(req)
         return req.json()
 
     # Added by Deon
@@ -1090,6 +1154,7 @@ class Clubhouse:
             "query": query
         }
         req = requests.post(f"{self.API_URL}/search", headers=self.HEADERS, json=data)
+        logging.info(req)
         return req.json()
 
     @require_authentication
@@ -1102,6 +1167,7 @@ class Clubhouse:
             "topic_id": int(topic_id)
         }
         req = requests.post(f"{self.API_URL}/get_topic", headers=self.HEADERS, json=data)
+        logging.info(req)
         return req.json()
 
     @require_authentication
@@ -1116,6 +1182,7 @@ class Clubhouse:
             page
         )
         req = requests.get(f"{self.API_URL}/get_clubs_for_topic?{query}", headers=self.HEADERS)
+        logging.info(req)
         return req.json()
 
     @require_authentication
@@ -1128,6 +1195,7 @@ class Clubhouse:
             "is_startable_only": is_startable_only
         }
         req = requests.post(f"{self.API_URL}/get_clubs", headers=self.HEADERS, json=data)
+        logging.info(req)
         return req.json()
 
     @require_authentication
@@ -1142,6 +1210,7 @@ class Clubhouse:
             page
         )
         req = requests.get(f"{self.API_URL}/get_users_for_topic?{query}", headers=self.HEADERS)
+        logging.info(req)
         return req.json()
 
     @require_authentication
@@ -1156,6 +1225,7 @@ class Clubhouse:
             "user_id": int(user_id)
         }
         req = requests.post(f"{self.API_URL}/invite_to_existing_channel", headers=self.HEADERS, json=data)
+        logging.info(req)
         return req.json()
 
     @require_authentication
@@ -1168,6 +1238,7 @@ class Clubhouse:
             "username": username,
         }
         req = requests.post(f"{self.API_URL}/update_username", headers=self.HEADERS, json=data)
+        logging.info(req)
         return req.json()
 
     @require_authentication
@@ -1182,6 +1253,7 @@ class Clubhouse:
             "name": name,
         }
         req = requests.post(f"{self.API_URL}/update_name", headers=self.HEADERS, json=data)
+        logging.info(req)
         return req.json()
 
     @unstable_endpoint
@@ -1200,6 +1272,7 @@ class Clubhouse:
             "twitter_secret": twitter_secret
         }
         req = requests.post(f"{self.API_URL}/update_twitter_username", headers=self.HEADERS, json=data)
+        logging.info(req)
         return req.json()
 
     @unstable_endpoint
@@ -1216,6 +1289,7 @@ class Clubhouse:
             "code": code
         }
         req = requests.post(f"{self.API_URL}/update_instagram_username", headers=self.HEADERS, json=data)
+        logging.info(req)
         return req.json()
 
     # This is same as username and needs to be fixed
@@ -1229,6 +1303,7 @@ class Clubhouse:
             "name": name,
         }
         req = requests.post(f"{self.API_URL}/update_name", headers=self.HEADERS, json=data)
+        logging.info(req)
         return req.json()
 
     @require_authentication
@@ -1241,6 +1316,7 @@ class Clubhouse:
             "refresh": refresh_token
         }
         req = requests.post(f"{self.API_URL}/refresh_token", headers=self.HEADERS, json=data)
+        logging.info(req)
         return req.json()
 
     @require_authentication
@@ -1253,6 +1329,7 @@ class Clubhouse:
             "bio": bio
         }
         req = requests.post(f"{self.API_URL}/update_bio", headers=self.HEADERS, json=data)
+        logging.info(req)
         return req.json()
 
     # This endpoint seems incorrect
@@ -1267,6 +1344,7 @@ class Clubhouse:
             "action_trails": action_trails
         }
         req = requests.post(f"{self.API_URL}/update_bio", headers=self.HEADERS, json=data)
+        logging.info(req)
         return req.json()
 
     @require_authentication
@@ -1283,6 +1361,7 @@ class Clubhouse:
             "topic_id": int(topic_id) if topic_id else None
         }
         req = requests.post(f"{self.API_URL}/add_user_topic", headers=self.HEADERS, json=data)
+        logging.info(req)
         return req.json()
 
     @require_authentication
@@ -1296,6 +1375,7 @@ class Clubhouse:
             "topic_id": int(topic_id) if topic_id else None
         }
         req = requests.post(f"{self.API_URL}/remove_user_topic", headers=self.HEADERS, json=data)
+        logging.info(req)
         return req.json()
 
     @unstable_endpoint
@@ -1314,6 +1394,7 @@ class Clubhouse:
             "email": email
         }
         req = requests.post(f"{self.API_URL}/report_incident", headers=self.HEADERS, json=data)
+        logging.info(req)
         return req.json()
 
     @unstable_endpoint
@@ -1324,6 +1405,7 @@ class Clubhouse:
         Unknown
         """
         req = requests.get(f"{self.API_URL}/reject_welcome_channel", headers=self.HEADERS)
+        logging.info(req)
         return req.json()
 
     @unstable_endpoint
@@ -1340,6 +1422,7 @@ class Clubhouse:
             "unflag_title": unflag_title,
         }
         req = requests.post(f"{self.API_URL}/update_channel_flags", headers=self.HEADERS, json=data)
+        logging.info(req)
         return req.json()
 
     @unstable_endpoint
@@ -1353,6 +1436,7 @@ class Clubhouse:
             "actionable_notification_id": actionable_notification_id
         }
         req = requests.post(f"{self.API_URL}/ignore_actionable_notification", headers=self.HEADERS, json=data)
+        logging.info(req)
         return req.json()
 
     # Is this a private room or a wave?
@@ -1368,6 +1452,7 @@ class Clubhouse:
             "channel": channel
         }
         req = requests.post(f"{self.API_URL}/invite_to_new_channel", headers=self.HEADERS, json=data)
+        logging.info(req)
         return req.json()
 
     # Is this a private room or a wave?
@@ -1382,6 +1467,7 @@ class Clubhouse:
             "channel_invite_id": channel_invite_id
         }
         req = requests.post(f"{self.API_URL}/accept_new_channel_invite", headers=self.HEADERS, json=data)
+        logging.info(req)
         return req.json()
 
     @unstable_endpoint
@@ -1395,6 +1481,7 @@ class Clubhouse:
             "channel_invite_id": channel_invite_id
         }
         req = requests.post(f"{self.API_URL}/reject_new_channel_invite", headers=self.HEADERS, json=data)
+        logging.info(req)
         return req.json()
 
     @unstable_endpoint
@@ -1408,6 +1495,7 @@ class Clubhouse:
             "channel_invite_id": channel_invite_id
         }
         req = requests.post(f"{self.API_URL}/cancel_new_channel_invite", headers=self.HEADERS, json=data)
+        logging.info(req)
         return req.json()
 
     @require_authentication
@@ -1421,6 +1509,7 @@ class Clubhouse:
             "user_id": int(user_id)
         }
         req = requests.post(f"{self.API_URL}/add_club_admin", headers=self.HEADERS, json=data)
+        logging.info(req)
         return req.json()
 
     @require_authentication
@@ -1434,6 +1523,7 @@ class Clubhouse:
             "user_id": int(user_id)
         }
         req = requests.post(f"{self.API_URL}/remove_club_admin", headers=self.HEADERS, json=data)
+        logging.info(req)
         return req.json()
 
     @require_authentication
@@ -1447,6 +1537,7 @@ class Clubhouse:
             "user_id": int(user_id)
         }
         req = requests.post(f"{self.API_URL}/remove_club_member", headers=self.HEADERS, json=data)
+        logging.info(req)
         return req.json()
 
     @require_authentication
@@ -1464,6 +1555,7 @@ class Clubhouse:
             "source_topic_id": source_topic_id
         }
         req = requests.post(f"{self.API_URL}/accept_club_member_invite", headers=self.HEADERS, json=data)
+        logging.info(req)
         return req.json()
 
     @require_authentication
@@ -1481,6 +1573,7 @@ class Clubhouse:
             "reason": reason
         }
         req = requests.post(f"{self.API_URL}/add_club_member", headers=self.HEADERS, json=data)
+        logging.info(req)
         return req.json()
 
     @require_authentication
@@ -1494,6 +1587,7 @@ class Clubhouse:
             "source_topic_id": source_topic_id
         }
         req = requests.post(f"{self.API_URL}/get_club_nominations", headers=self.HEADERS, json=data)
+        logging.info(req)
         return req.json()
 
     @require_authentication
@@ -1508,6 +1602,7 @@ class Clubhouse:
             "invite_nomination_id": invite_nomination_id
         }
         req = requests.post(f"{self.API_URL}/approve_club_nomination", headers=self.HEADERS, json=data)
+        logging.info(req)
         return req.json()
 
     @require_authentication
@@ -1522,6 +1617,7 @@ class Clubhouse:
             "invite_nomination_id": invite_nomination_id
         }
         req = requests.post(f"{self.API_URL}/approve_club_nomination", headers=self.HEADERS, json=data)
+        logging.info(req)
         return req.json()
 
     @require_authentication
@@ -1535,6 +1631,7 @@ class Clubhouse:
             "topic_id": int(topic_id)
         }
         req = requests.post(f"{self.API_URL}/add_club_topic", headers=self.HEADERS, json=data)
+        logging.info(req)
         return req.json()
 
     @require_authentication
@@ -1548,6 +1645,7 @@ class Clubhouse:
             "topic_id": int(topic_id)
         }
         req = requests.post(f"{self.API_URL}/remove_club_topic", headers=self.HEADERS, json=data)
+        logging.info(req)
         return req.json()
 
     # WHat is this?
@@ -1558,6 +1656,7 @@ class Clubhouse:
         Get events to start
         """
         req = requests.get(f"{self.API_URL}/get_events_to_start", headers=self.HEADERS)
+        logging.info(req)
         return req.json()
 
     @require_authentication
@@ -1571,6 +1670,7 @@ class Clubhouse:
             "is_follow_allowed": is_follow_allowed
         }
         req = requests.post(f"{self.API_URL}/update_is_follow_allowed", headers=self.HEADERS, json=data)
+        logging.info(req)
         return req.json()
 
     @require_authentication
@@ -1585,6 +1685,7 @@ class Clubhouse:
             "is_membership_private": is_membership_private
         }
         req = requests.post(f"{self.API_URL}/update_is_membership_private", headers=self.HEADERS, json=data)
+        logging.info(req)
         return req.json()
 
     @require_authentication
@@ -1598,6 +1699,7 @@ class Clubhouse:
             "is_community": is_community
         }
         req = requests.post(f"{self.API_URL}/update_is_community", headers=self.HEADERS, json=data)
+        logging.info(req)
         return req.json()
 
     @require_authentication
@@ -1611,6 +1713,7 @@ class Clubhouse:
             "description": description
         }
         req = requests.post(f"{self.API_URL}/update_club_description", headers=self.HEADERS, json=data)
+        logging.info(req)
         return req.json()
 
     @require_authentication
@@ -1625,6 +1728,7 @@ class Clubhouse:
             "rules": rules if rules else [],
         }
         req = requests.post(f"{self.API_URL}/update_club_rules", headers=self.HEADERS, json=data)
+        logging.info(req)
         return req.json()
 
     @require_authentication
@@ -1635,11 +1739,10 @@ class Clubhouse:
         """
         query = f"user_id={user_id}&page_size={page_size}&page={page}"
         req = requests.get(f"{self.API_URL}/get_events_for_user?{query}", headers=self.HEADERS)
+        logging.info(req)
         return req.json()
 
-
-    ## Everything below added by Deon
-
+    ## All API calls below here added by Deon
     @require_authentication
     def get_channel_messages(self, channel):
         """ (Clubhouse, str) -> dict
@@ -1648,6 +1751,7 @@ class Clubhouse:
         """
         query = f"channel={channel}&is_chronological_order=0"
         req = requests.get(f"{self.API_URL}/get_channel_messages?{query}", headers=self.HEADERS)
+        logging.info(req)
         return req.json()
 
 
@@ -1662,6 +1766,7 @@ class Clubhouse:
             "message": message
         }
         req = requests.post(f"{self.API_URL}/send_channel_message", headers=self.HEADERS, json=data)
+        logging.info(req)
         return req.json()
 
 
@@ -1672,6 +1777,7 @@ class Clubhouse:
         Get events for the specific user.
         """
         req = requests.get(f"{self.API_URL}/get_chats", headers=self.HEADERS)
+        logging.info(req)
         return req.json()
 
 
@@ -1686,6 +1792,7 @@ class Clubhouse:
             "participant_ids": participant_ids
         }
         req = requests.post(f"{self.API_URL}/search_chats", headers=self.HEADERS, json=data)
+        logging.info(req)
         return req.json()
 
 
@@ -1696,6 +1803,7 @@ class Clubhouse:
         Get events for the specific user.
         """
         req = requests.get(f"{self.API_URL}/get_chat_messages?chat_id={chat_id}", headers=self.HEADERS)
+        logging.info(req)
         return req.json()
 
 
@@ -1710,6 +1818,7 @@ class Clubhouse:
             "participant_ids": participant_ids
         }
         req = requests.post(f"{self.API_URL}/create_chat", headers=self.HEADERS, json=data)
+        logging.info(req)
         return req.json()
 
 
@@ -1729,8 +1838,8 @@ class Clubhouse:
 
             else:
                 return "[.] No chat history"
-
-        return req
+        logging.info(req)
+        return req.json
 
 
     @require_authentication
@@ -1742,8 +1851,9 @@ class Clubhouse:
                 chat_id = _search["chats"][0]["chat_id"]
         else:
             req = self.create_backchannel(participant_ids)
-            if req["success"]:
+            if req.get("success"):
                 chat_id = req["chat_id"]
+        logging.info(req)
         return chat_id
 
 
@@ -1764,6 +1874,7 @@ class Clubhouse:
         }
 
         req = requests.post(f"{self.API_URL}/send_chat_message", headers=self.HEADERS, json=data)
+        logging.info(req)
         return req.json()
 
 
@@ -1779,6 +1890,7 @@ class Clubhouse:
             "is_on_call": False
         }
         req = requests.post(f"{self.API_URL}/update_channel_user_status", headers=self.HEADERS, json=data)
+        logging.info(req)
         return req.json()
 
 
@@ -1793,6 +1905,7 @@ class Clubhouse:
             "link": link
         }
         req = requests.post(f"{self.API_URL}/add_channel_link", headers=self.HEADERS, json=data)
+        logging.info(req)
         return req.json()
 
     # This endpoint is not working
@@ -1810,6 +1923,7 @@ class Clubhouse:
             "link": link_id
         }
         req = requests.post(f"{self.API_URL}/remove_channel_link", headers=self.HEADERS, json=data)
+        logging.info(req)
         return req.json()
 
 
