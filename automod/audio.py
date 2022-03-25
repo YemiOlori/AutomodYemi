@@ -25,77 +25,10 @@ from . import moderation as mod_tools
 auto_mod_client = Clubhouse()
 
 
-# Rewrite this function so that it's not redundant with 'read_config
-def read_user_config(file_path, section):
-    """
-    The function to read the configuration parameters from the relevant section in the config file.
-
-    :param file_path: the name of the file that will be read.
-    :param section: The section of the file has to be read.
-    :return section_content: Dictionary with the section parameters.
-    :rtype: Dictionary
-    """
-    # create parser and read configuration file
-    parser = ConfigParser()
-    parser.read(file_path)
-
-    section_content = {}
-    if parser.has_section(section):
-        items = parser.items(section)
-        for item in items:
-            section_content[item[0]] = item[1]
-    else:
-        raise Exception(f"Error in fetching config in read_config method. {section} not found in {file_path}")
-        # raise Exception('Error in fetching config in read_config method. {0} not found in \
-        #  {1}'.format(section, file_path))
-
-    return section_content
 
 
-def set_logging_basics(config_dict):
-    """
-    The function to set the logging information.
-    :param config_dict: dictionary with details of configuration
-    :return: None
-    """
-    folder = config_dict.get('folder')
-    file = config_dict.get('file')
-    level = config_dict.get('level')
-    filemode = config_dict.get('filemode')
-    logging.basicConfig(
-        filename=f"{folder}{file}",
-        filemode=filemode,
-        format='%(asctime)s - %(name)s - %(levelname)s - %(message)s',
-        level=level)
 
 
-# Hardcoding the name of config file and section. This would be part of Global variable file
-MASTER_FILE = '/Users/deon/Documents/GitHub/HQ/config.ini'
-LOGGER_SECTION = 'Logger'
-logger_details = read_user_config(MASTER_FILE, LOGGER_SECTION)
-set_logging_basics(logger_details)
-
-
-def load_phone_number():
-    try:
-        # Read config.ini
-        config_object = ConfigParser()
-        config_object.read("/Users/deon/Documents/GitHub/HQ/config.ini")
-    except AttributeError:
-        logging.warning("auto_mood_cli.load_phone_number No 'mod_config.ini' file found in root directory")
-        sys.exit(1)
-    else:
-        try:
-            # Get phone number
-            userinfo = config_object["Account"]
-            phone_number = userinfo["phone_number"]
-        except KeyError:
-            logging.info("auto_mood_cli.load_phone_number No 'phone_number' in config.ini")
-            phone_number = input("[.] Please enter your phone number. (+818043217654) > ")
-        else:
-            logging.info("auto_mood_cli.load_phone_number Loaded phone number")
-
-    return phone_number
 
 
 phone_number = load_phone_number()
