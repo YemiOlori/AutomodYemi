@@ -1,4 +1,7 @@
-from automod import auto_mod_cli as auto_mod
-from automod import moderation as mod_tools
-from automod.clubhouse import Clubhouse as ch
-from . import game_tools as games
+from . import main as automod
+from .clubhouse import Clubhouse
+from . import moderation as mod
+from . import chat
+from . import audio
+
+
