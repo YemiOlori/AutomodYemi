@@ -71,6 +71,7 @@ class Clubhouse:
 
     }
 
+    # Remove this decorator also?
     def require_authentication(func):
         """ Simple decorator to check for the authentication """
         @functools.wraps(func)
@@ -82,6 +83,7 @@ class Clubhouse:
             return func(self, *args, **kwargs)
         return wrap
 
+    # Remove this decorator as endpoints are testes
     def unstable_endpoint(func):
         """ Simple decorator to warn that this endpoint is never tested at all. """
         @functools.wraps(func)
