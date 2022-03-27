@@ -14,6 +14,7 @@ import functools
 import requests
 import logging
 
+
 class Clubhouse:
     """
     Clubhouse Class
@@ -851,7 +852,6 @@ class Clubhouse:
         req = requests.post(f"{self.API_URL}/audience_reply", headers=self.HEADERS, json=data)
         logging.info(req)
         return req.json()
-
 
     @require_authentication
     def change_handraise_settings(self, channel, is_enabled=True, handraise_permission=1):
