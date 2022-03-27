@@ -14,25 +14,10 @@ from configparser import ConfigParser
 
 import pytz
 import keyboard
-from rich.table import Table
-from rich.console import Console
-from rich import box
-import boto3
 
-from .clubhouse import Clubhouse
-from . import moderation as mod_tools
+from . import moderation as mod
 
-auto_mod_client = Clubhouse()
-
-
-
-
-
-
-
-
-phone_number = load_phone_number()
-
+auto_mod_client = mod.ModClient()
 
 # Set some global variables
 # Figure this out when you're ready to start playing music
@@ -43,7 +28,7 @@ try:
     eventHandler = agorartc.RtcEngineEventHandlerBase()
     RTC.initEventHandler(eventHandler)
     # 0xFFFFFFFE will exclude Chinese servers from Agora's servers.
-    RTC.initialize(Clubhouse.AGORA_KEY, None, agorartc.AREA_CODE_GLOB & 0xFFFFFFFE)
+    RTC.initialize(mod.ModClient.AGORA_KEY, None, agorartc.AREA_CODE_GLOB & 0xFFFFFFFE)
 
     audio_recording_device_manager, err = RTC.createAudioRecordingDeviceManager()
     count = audio_recording_device_manager.getCount()
@@ -146,87 +131,7 @@ def login(client=auto_mod_client):
     return client
 
 
-def reload_user(client=auto_mod_client):
-    """
-    A function to reload Clubhouse client from previous session.
 
-    :param client: A Clubhouse object
-    :return client: A Clubhouse object updated with configuration information
-    """
-    user_config = read_internal_config()
-    user_id = user_config.get('user_id')
-    user_token = user_config.get('user_token')
-    user_device = user_config.get('user_device')
-    refresh_token = user_config.get('refresh_token')
-    access_token = user_config.get('access_token')
-
-    # Check if user is authenticated
-    if user_id and user_token and user_device:
-        client = Clubhouse(
-            user_id=user_id,
-            user_token=user_token,
-            user_device=user_device
-        )
-        logging.info("auto_mod_cli.reload_user Reload client successful")
-    else:
-        logging.info("auto_mod_cli.reload_user Reload client not successful")
-
-    return client
-
-
-def get_hallway(client, max_limit=30):
-
-    # Get channels and print
-    console = Console(width=180)
-    table = Table(show_header=True, header_style="bold magenta", box=box.MINIMAL_HEAVY_HEAD, leading=True)
-    table.add_column("speakers", width=8, justify='center')
-    table.add_column("users", width=8, justify='center')
-    table.add_column("type", width=8)
-    table.add_column("channel", width=10)
-    table.add_column("club", width=35, no_wrap=True)
-    table.add_column("title", style="cyan", width=70)
-
-    feed = client.get_feed()
-
-    channel_list = []
-    for feed_item in feed['items']:
-
-        key = feed_item.keys()
-        if 'channel' in key:
-            channel_list.append(feed_item)
-
-    i = 0
-    for channel in channel_list:
-        channel = channel['channel']
-
-        i += 1
-        if i > max_limit:
-            break
-
-        channel_type = ''
-        club = ''
-
-        if channel['is_social_mode']:
-            channel_type = "social"
-
-        if channel['is_private']:
-            channel_type = "private"
-
-        if channel['club']:
-            club = channel['club']['name']
-
-        table.add_row(
-            str(int(channel['num_speakers'])),
-            str(int(channel['num_all'])),
-            str(channel_type),
-            str(channel['channel']),
-            str(club),
-            str(channel['topic']),
-        )
-
-    console.print(table)
-
-    return
 
 
 def mute_audio():
