@@ -2,14 +2,14 @@ from configparser import ConfigParser
 import requests
 import logging
 import time
+from datetime import datetime
 
 import fancy_text
+import pytz
 
 from .clubhouse import Clubhouse
 from .moderation import load_config
 from .moderation import config_to_dict
-from .moderation import set_interval
-
 
 class ChatClient(Clubhouse):
     def __init__(self):
@@ -25,6 +25,55 @@ class ChatClient(Clubhouse):
             "X-RapidAPI-Host": config_to_dict(self.config_object, "RapidAPI", "host"),
             "X-RapidAPI-Key": config_to_dict(self.config_object, "RapidAPI", "key")
         }
+        self.command_responded_list = []
+
+    def get_channel_stream(self, channel):
+        channel_message_stream = self.get_channel_messages(channel)
+
+        command_triggered_list = []
+        for messages in channel_message_stream.get("messages")[:20]:
+            message_id = messages.get("message_id")
+            time_diff = None
+
+            if message.startswith("/"):
+                time_created = message.get("time_created")
+                time_created = datetime.strptime(time_created, '%Y-%m-%dT%H:%M:%S.%f%z')
+                time_now = datetime.now(pytz.timezone('UTC'))
+                time_diff = time_now - time_created
+                time_diff = time_diff.total_seconds()
+
+            if  time_diff <= 30 and message_id not in self.command_responded_list:
+                command_triggered_list.append(messages)
+                logging.info(f"Channel message command {message}")
+
+        return command_triggered_list
+
+    def check_command(self, channel):
+        command_triggered_list = self.get_channel_stream(channel)
+        ud_prefixes = ["/urban", "/ud"]
+        mw_prefixes = ["/def", "/dict"]
+        imdb_prefixes = ["/imdb"]
+
+        urban_dict_list = []
+        mw_dict_list = []
+        imdb_list = []
+        for messages in command_triggered_list:
+            message = messages("message").lower()
+
+            if message.startswith(tuple(ud_prefixes)):
+                urban_dict_list.append(messages)
+            elif message.startswith(tuple(mw_prefixes)):
+                mw_dict_list.append(messages)
+            elif message.startswith(tuple(imdb_prefixes)):
+                imdb_list.append(messages)
+
+        triggered = {
+            "urban_dict": urban_dict_list,
+            "mw_dict": mw_dict_list,
+            "imdb": imdb_list,
+        }
+        return triggered
+
 
 class UrbanDict(ChatClient):
     def __init__(self):
@@ -32,11 +81,11 @@ class UrbanDict(ChatClient):
 
         """
         super().__init__()
-        self.URBAN_DICT_API_URL = config_to_dict(self.config_object, "UrbanDictionary", "api_url"),
-        self.urban_dict_responded_message_list = []
-        self.urban_dict_responded_term_list = []
+        self.URBAN_DICT_API_URL = config_to_dict(self.config_object, "UrbanDictionary", "api_url")
+        self.ud_thread = None
+        self.ud_defined_list = []
 
-    urban_dict_active = {}
+    # urban_dict_active = {}
 
     def __str__(self):
         """
@@ -80,116 +129,69 @@ class UrbanDict(ChatClient):
 
         return definition_list
 
-    def urban_dict(self, channel):
-        channel_message_stream = self.get_channel_messages(channel)
+    def urban_dict_trigger(self, message_list):
+        urban_dict_requests = []
+        for messages in message_list:
+            message_id = messages.get("message_id")
+            user_id = messages.get("user_id")
+            message = messages("message").lower()
 
-        # def urban_dict_trigger(channel_message_stream):
+            if message.startswith("/urban"):
+                message = message.split("/urban dictionary: ")
+                if len(message) == 1:
+                    message = message[0].split("/urban dictionary ")
+                if len(message) == 1:
+                    message = message[0].split("/urban dict: ")
+                if len(message) == 1:
+                    message = message[0].split("/urban dict ")
 
-        def urban_dict_search(urban_dict_requests):
-            if not urban_dict_requests:
-                return False
+            elif message.startswith("/ud"):
+                message = message.split("/ud: ")
+                if len(message) == 1:
+                    message = message[0].split("/ud ")
 
-            ud_client = UrbanDict()
-            for request in urban_dict_requests:
-                term = request["term"]
-                defined_term = ud_client.get_definition(term)
-                request["definitions"] = defined_term
+            term = message[1]
+            if term and term not in self.ud_defined_list:
+                request = {"message_id": message_id, "user_id": user_id, "term": term}
+                logging.info(f"Urban Dict command {request}")
+                urban_dict_requests.append(request)
 
-            return urban_dict_requests
+        return urban_dict_requests if len(urban_dict_requests) > 0 else False
 
-        def urban_dict_respond(client, channel, urban_dict_requests):
-            if not urban_dict_requests:
-                return False
+    def urban_dict(self, channel, message_list):
+        urban_dict_requests = self.urban_dict_trigger(message_list)
+        if not urban_dict_requests:
+            return False
 
-            for request in urban_dict_requests:
-                term = request["term"]
-                definitions = request["definitions"]
-                logging.info(f"passed: {definitions}")
-                user_id = request["user_id"]
-                user_profile = client.get_profile(user_id).get("user_profile")
-                user_name = user_profile.get("display_name") if user_profile.get("display_name") else user_profile.get(
-                    "name")
+        for request in urban_dict_requests:
+            term = request.get("term")
+            definition= self.get_definition(term)
 
-                message = f"@{user_name} From Urban Dictionary:"
-                reply = client.send_channel_message(channel, message)
-                logging.info(f"reply: {reply}")
+            user_id = request.get("user_id")
+            user_profile = self.get_profile(user_id).get("user_profile")
+            user_name = (
+                user_profile.get("display_name") if user_profile.get("display_name")
+                else user_profile.get("name")
+            )
 
-                if not reply.get("success"):
-                    return False
-
-                i = 0
-                for definition in definitions:
-                    time.sleep(5)
-                    print(i)
-                    i += 1
-                    reply = client.send_channel_message(channel, definition)
-                    logging.info(f"reply: {reply}")
-                    if not reply.get("success"):
-                        return False
-
-            return True
-
-        urban_dict_requests = urban_dict_trigger(channel_message_stream)
-        urban_dict_requests = urban_dict_search(urban_dict_requests)
-        urban_dict_respond(client, channel, urban_dict_requests)
+            reply_message = f"@{user_name}: 𝗨𝗿𝗯𝗮𝗻 𝗗𝗶𝗰𝘁𝗶𝗼𝗻𝗮𝘆 [{term}]: {definition}"
+            self.send_channel_message(channel, reply_message)
+            self.command_responded_list.append(request.get("message_id"))
+            self.ud_defined_list.append(term)
 
         return True
 
 
 
+def chat_client(channel):
+    _chat_client = ChatClient()
+    ud_client = UrbanDict()
 
+    message_list = _chat_client.check_command(channel)
 
+    if message_list.get("urban_dict"):
+        ud_client.urban_dict(channel, message_list.get("urban_dict"))
 
-
-
-
-
-def urban_dict_main():
-
-        def urban_dict_trigger(channel_message_stream):
-            urban_dict_requests = []
-            term = False
-            for messages in channel_message_stream["messages"][:20]:
-                message_id = messages["message_id"]
-                user_id = messages["user_profile"]["user_id"]
-                message = messages["message"].lower()
-
-                if message_id in Var.urban_dict_response_message_list:
-                    pass
-
-                elif user_id == 541615340:
-                    pass
-
-                elif message.startswith("urban"):
-                    message = message.split("urban dictionary: ")
-                    if len(message) == 1:
-                        message = message[0].split("urban dictionary ")
-                    if len(message) == 1:
-                        message = message[0].split("urban dict: ")
-                    if len(message) == 1:
-                        message = message[0].split("urban dict ")
-
-                    term = message[1]
-                    logging.info(f"game_tools.urban_dict_client.urban_dict_trigger channel message request {message}")
-
-                elif message.startswith("ud"):
-                    message = message.split("ud: ")
-                    if len(message) == 1:
-                        message = message[0].split("ud ")
-
-                    term = message[1]
-                    logging.info(f"game_tools.urban_dict_client.urban_dict_trigger channel message request {message}")
-
-                if term and term not in Var.urban_dict_response_term_list:
-                    request = {"message_id": message_id, "user_id": user_id, "term": term}
-                    logging.info(f"game_tools.urban_dict_client.urban_dict_trigger {request}")
-                    urban_dict_requests.append(request)
-                    Var.urban_dict_response_message_list.append(message_id)
-                    Var.urban_dict_response_term_list.append(term)
-
-            logging.info(f"request: {urban_dict_requests}")
-
-            return urban_dict_requests if len(urban_dict_requests) > 0 else False
 
 
 
