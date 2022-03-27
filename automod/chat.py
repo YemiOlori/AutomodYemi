@@ -1,8 +1,11 @@
 from configparser import ConfigParser
 import requests
-from .clubhouse import Clubhouse
 import logging
 import time
+
+import fancy_text
+
+from .clubhouse import Clubhouse
 
 
 def read_config(section):
@@ -36,7 +39,11 @@ class Var:
     urban_dict_response_term_list = []
 
 
-class UrbanDict:
+class ChatClient(Clubhouse):
+    pass
+
+
+class UrbanDict(ChatClient):
 
     urban_dict_active = {}
 
