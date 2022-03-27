@@ -52,6 +52,39 @@ def config_to_list(config_object, section):
     return config_section
 
 
+def reload_user():
+    """
+    A function to reload Clubhouse client from previous session.
+
+    :param client: A Clubhouse object
+    :return client: A Clubhouse object updated with configuration information
+    """
+    config_file = "/Users/deon/Documents/GitHub/HQ/setting.ini"
+    config_object = load_config(config_file)
+
+    user_config = config_to_dict(config_object, "Account")
+
+    user_id = user_config.get("user_id")
+    user_token = user_config.get("user_token")
+    user_device = user_config.get("user_device")
+    refresh_token = user_config.get("refresh_token")
+    access_token = user_config.get("access_token")
+
+    # Check if user is authenticated
+    client = ModClient()
+    # if user_id and user_token and user_device:
+    #     client = ModClient(
+    #         user_id=user_id,
+    #         user_token=user_token,
+    #         user_device=user_device,
+    #     )
+    #     logging.info("Reload client successful")
+    # else:
+    #     logging.info("Reload client not successful")
+
+    return client
+
+
 def set_interval(interval):
     """
     A function to set the interval decorator.
@@ -64,7 +97,7 @@ def set_interval(interval):
     :rtype: function
     """
     def decorator(func):
-        @wraps(func)  # Is this in the right place?
+        # @wraps(func)  # Is this in the right place?
         def wrap(*args, **kwargs):
             is_stopped = threading.Event()
 
@@ -74,13 +107,13 @@ def set_interval(interval):
                     if not run:
                         logging.info(f"Stopped: {func}")
                         break
-                thread = threading.Thread(target=loop)
-                thread.daemon = True
-                thread.start()
-                logging.info(f"Started: {func}")
-                return is_stopped
-            return wrap
-        return decorator
+            thread = threading.Thread(target=loop)
+            thread.daemon = True
+            thread.start()
+            logging.info(f"Started: {func}")
+            return is_stopped
+        return wrap
+    return decorator
 
 
 class ModClient(Clubhouse):
@@ -88,43 +121,65 @@ class ModClient(Clubhouse):
 
     """
 
+    # CONFIG_FILE = "/Users/deon/Documents/GitHub/HQ/config.ini"
+    # config_object = load_config(CONFIG_FILE)
+    #
+    # CLIENT_ID = config_to_dict(config_object, "Account", "user_id")
+    # PHONE_NUMBER = config_to_dict(config_object, "Account", "phone_number")
+    # S3_BUCKET = config_to_dict(config_object, "S3", "bucket")
+    #
+    # AUTO_MOD_CLUBS = config_to_list(config_object, "AutoModClubs")
+    # SOCIAL_CLUBS = config_to_list(config_object, "SocialClubs")
+    # RESPOND_PING_LIST = config_to_list(config_object, "RespondPing")
+    # MOD_LIST = config_to_list(config_object, "ModList")
+    # GUEST_LIST = (config_to_list(config_object, "GuestList")
+    #               + config_to_list(config_object, "ASocialRoomGuestList"))
+
+    config_file = "/Users/deon/Documents/GitHub/HQ/config.ini"
+    config_object = load_config(config_file)
+
+    client_id = config_to_dict(config_object, "Account", "user_id")
+    phone_number = config_to_dict(config_object, "Account", "phone_number")
+    user_device = config_to_dict(config_object, "Account", "user_device")
+    user_token = config_to_dict(config_object, "Account", "user_token")
+
+    s3_bucket = config_to_dict(config_object, "S3", "bucket")
+
+    auto_mod_clubs = config_to_list(config_object, "AutoModClubs")
+    social_clubs = config_to_list(config_object, "SocialClubs")
+    respond_ping_list = config_to_list(config_object, "RespondPing")
+    mod_list = config_to_list(config_object, "ModList")
+    guest_list = (config_to_list(config_object, "GuestList")
+                  + config_to_list(config_object, "ASocialRoomGuestList"))
+
+    waiting_speaker = False
+    granted_speaker = False
+    active_speaker = False
+    waiting_mod = False
+    granted_mod = False
+    active_mod = False
+
+    waiting_ping_thread = None
+    waiting_speaker_thread = None
+    waiting_mod_thread = None
+    active_mod_thread = None
+    announcement_thread = None
+    music_thread = None
+    welcome_thread = None
+    keep_alive_thread = None
+    chat_client_thread = None
+
+    already_welcomed_list = []
+    already_in_room_list = []
+
+    dump_interval = 0
+    dump_counter = 0
+
     def __init__(self):
         """
 
         """
-        super().__init__()
-        self.client_id = self.HEADERS.get('CH-UserID')
-
-        config_file = "/Users/deon/Documents/GitHub/HQ/config.ini"
-        config_object = load_config(config_file)
-        self.s3_bucket = config_to_dict(config_object, "S3", "bucket")
-        self.auto_mod_clubs = config_to_list(config_object, "AutoModClubs")
-        self.respond_ping_list = config_to_list(config_object, "RespondPing")
-        self.mod_list = config_to_list(config_object, "ModList")
-        self.guest_list = (config_to_list(config_object, "GuestList")
-                           + config_to_list(config_object, "ASocialRoomGuestList"))
-
-        self.waiting_speaker = False
-        self.granted_speaker = False
-        self.active_speaker = False
-        self.waiting_mod = False
-        self.granted_mod = False
-        self.active_mod = False
-
-        self.waiting_ping_thread = None
-        self.waiting_speaker_thread = None
-        self.waiting_mod_thread = None
-        self.active_mod_thread = None
-        self.announcement_thread = None
-        self.music_thread = None
-        self.welcome_thread = None
-        self.keep_alive_thread = None
-
-        self.already_welcomed_list = []
-        self.already_in_room_list = []
-
-        self.waiting_speaker_counter = 0
-        self.counter = 0
+        super().__init__(self.client_id, self.user_token, self.user_device)
 
     def __repr__(self):
         pass
@@ -156,6 +211,32 @@ class ModClient(Clubhouse):
             Key=key,
         )
         response = run.get("success")
+        logging.info(run)
+        return response
+
+    def data_dump(self, dump, source, channel=""):
+        log = f"Dumped {source} {channel}"
+        key = ""
+
+        if source == "feed":
+            key = source
+
+        elif source == "channel":
+            key = f"channel_{dump.get('channel')}"
+
+        elif source == "channel_dict":
+            key = f"channel_{dump.get('channel_info').get('channel')}"
+
+        elif source == 'join':
+            key = f"join_{dump.get('channel')}"
+
+        else:
+            key = "unrecognized"
+            log = f"Unrecognized dumping source {source}"
+
+        logging.info(log)
+        response = self.s3_client_dump(dump, key)
+
         return response
 
     @set_interval(30)
@@ -171,9 +252,8 @@ class ModClient(Clubhouse):
         :return: Server response
         :rtype: bool
         """
-        run = self.active_ping(channel)
-        response = run.get("success")
-        return response
+        self.active_ping(channel)
+        return True
 
     def send_room_chat(self, channel, message=str or list):
         """
@@ -391,319 +471,6 @@ class ModClient(Clubhouse):
 
 
 
-
-
-
-
-
-
-
-
-
-
-def run_client_scratch():
-    channel = None
-
-
-
-    def set_hello_message(join_dict, channel_dict, mod_channel=False, music=False):
-        """Defines which message to send to the room chat upon joining."""
-
-
-
-
-
-
-
-
-
-
-
-        # client_info = channel_dict.get("client_info")
-        creator_name = get_channel_creator(join_dict)
-        speaker_status = client_speaker_status(channel_dict)
-        mod_status = client_mod_status(channel_dict)
-
-        def request_speak_and_mod():
-            message = "If you'd like to use my features, please invite me to speak and make me a Moderator. ✳️"
-            return message
-
-        def request_mod():
-            message = "If you'd like to use my features, please make me a Moderator. ✳️"
-            return message
-
-        def request_speak():
-            message = "If you'd like to hear music, please invite me to speak. 🎶"
-            return message
-
-        def map_task():
-            message = None
-            if not speaker_status:
-                if mod_channel:
-                    message = request_speak_and_mod()
-                elif music:
-                    message = request_speak()
-            elif not mod_status and mod_channel:
-                message = request_mod()
-            return message
-
-        def set_message():
-            message_1 = f"🤖 Hello {creator_name}! I'm AutoMod! 🎉"
-            message_2 = map_task()
-            message = [message_1, message_2] if message_2 else message_1
-            return message
-
-        hello_message = set_message()
-
-        return hello_message
-
-
-
-
-
-
-
-
-
-    join_status = ModClient.get_join_status(channel)
-    room_creator = join_status.get("channel_creator")
-    client_speaker_status = ModClient.get_channel_status("")
-    client_mod_status = ModClient.get_channel_status()
-
-
-
-
-
-
-
-
-
-
-
-
-
-def scratch():
-
-    # Figure out how to avoid this function
-    def classify_data_dump(dump, source, channel=""):
-
-        log = f"Dumped {source} {channel}"
-
-        if source == 'feed':
-            if dump.get('items'):
-                data = dump
-                key = source
-            else:
-                log = dump
-
-        elif source == 'channel':
-            if dump.get('success'):
-                data = dump
-                key = f"channel_{dump['channel']}"
-            else:
-                log = dump
-
-        elif source == 'channel_dict':
-            if dump.get('channel_info'):
-                data = dump
-                key = f"channel_{dump['channel_info']['channel']}"
-            else:
-                log = dump
-
-        elif source == 'join':
-            if dump.get('users'):
-                data = dump
-                key = f"join_{dump['channel']}"
-            else:
-                log = dump
-
-        else:
-            data = dump
-            key = "unrecognized"
-            log = f"Unrecognized dumping source {source}"
-
-        response = {
-            "data": data,
-            "key": key,
-        }
-
-        logging.info(log)
-
-        return response
-
-    # Simplify this also
-    def data_dump_client(client, dump=None, source=None, channel=""):
-        is_private = False
-        is_social_mode = False
-
-        if dump:
-            if source == "join":
-                is_private = dump["is_private"]
-                is_social_mode = dump["is_social_mode"]
-
-            elif source == "channel":
-                is_private = dump["is_private"]
-                is_social_mode = dump["is_social_mode"]
-
-            elif source == "channel_dict":
-                is_private = dump["channel_info"]["is_private"]
-                is_social_mode = dump["channel_info"]["is_social_mode"]
-
-            if not is_private and not is_social_mode:
-                data_dump(dump, source, channel)
-
-        else:
-            feed_info = client.get_feed()
-            data_dump(feed_info, 'feed')
-
-            channel_info = client.get_channel(channel)
-            if not channel_info['is_social_mode'] and not channel_info['is_private']:
-                data_dump(channel_info, 'channel', channel)
-
-        return
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-    @set_interval(30)
-    def music_client(client, channel):
-        channel_dict = get_channel_status(client, channel)
-        client_info = channel_dict["client_info"]
-        client_speaker_status = client_info["is_speaker"]
-
-        if Var.counter == 7:
-            Var.counter = 0
-
-        if Var.active_speaker and not client_speaker_status:
-            client.accept_speaker_invite(channel, Var.client_id)
-            logging.info("moderation_tools.mod_channel ModClient is no longer a speaker")
-            logging.info("moderation_tools.mod_channel ModClient attempted to accept new speaker invitation")
-
-            if client_speaker_status:
-                logging.info("moderation_tools.mod_channel ModClient accepted new speaker invitation")
-
-        if Var.active_speaker and not client_speaker_status and Var.counter == 4:
-            Var.waiting_speaker = True
-
-        if Var.waiting_speaker and not client_speaker_status and Var.counter == 7:
-            termination(client, channel)
-            logging.info("moderation_tools.mod_channel Triggered terminate_mod")
-            return False
-
-        if Var.counter == 6:
-            feed_info = client.get_feed()
-            data_dump_client(client, feed_info, 'feed')
-            data_dump_client(client, channel_dict, "channel_dict", channel)
-
-        Var.counter += 1
-
-        return
-
-
-    @set_interval(180)
-    def track_room_client(client, channel):
-        join_dict = client.join_channel(channel)
-        data_dump(join_dict, 'join', channel)
-
-        return True
-
-
-    @set_interval(30)
-    def welcome_all_client(client, channel):
-        channel_dict = get_channel_status(client, channel)
-        channel_info = channel_dict["channel_info"]
-        user_info = channel_dict["user_info"]
-
-        if Var.counter == 7:
-            Var.counter = 0
-
-        for _user in user_info:
-            user_id = _user["user_id"]
-            if user_id not in Var.already_welcomed_list:
-                welcome_guests(client, channel, _user)
-
-        if not channel_info or not channel_info["success"]:
-            termination(client, channel)
-            return False
-
-        if Var.counter == 6:
-            feed_info = client.get_feed()
-            data_dump_client(client, feed_info, 'feed')
-            data_dump_client(client, channel_dict, "channel_dict", channel)
-
-        Var.counter += 1
-
-        return True
-
-    @set_interval(10)
-    def urban_dict_client(client, channel):
-        games.urban_dict(client, channel)
-
-        return True
-
-
-    def automation(client, channel, task=None, announcement=None, interval=3600):
-        join_dict = client.join_channel(channel)
-        data_dump(join_dict, 'join', channel)
-        client.active_ping(channel)
-        Var.counter = 0
-
-        for _user in join_dict['users']:
-            Var.already_in_room_list.append(_user['user_id'])
-
-        logging.info(f"moderation_tools.automation {len(Var.already_in_room_list)} users already in channel")
-
-        channel_dict = get_channel_status(client, channel)
-        data_dump(channel_dict, 'channel_dict', channel)
-
-        Var.urban_dict_thread = urban_dict_client(client, channel)
-
-        if task == "mod":
-            channel_dict = get_channel_status(client, channel)
-            request_speaker_permission(client, channel, channel_dict, join_dict, mod=True)
-            Var.mod_channel_thread = mod_client(client, channel)
-            Var.ping_keep_alive_thread = ping_keep_alive_client(client, channel)
-
-        elif task == "music":
-            request_speaker_permission(client, channel, channel_dict, join_dict, music=True)
-            Var.music_thread = music_client(client, channel)
-            Var.ping_keep_alive_thread = ping_keep_alive_client(client, channel)
-
-        elif task == "track":
-            Var.track_thread = track_room_client(client, channel)
-
-        elif task == "welcome":
-            Var.welcome_thread = welcome_all_client(client, channel)
-            Var.ping_keep_alive_thread = ping_keep_alive_client(client, channel)
-
-        if announcement:
-            # send_room_chat(client, channel, announcement)
-            Var.announce_thread = set_announcement(client, channel, announcement, interval)
-
-        elif channel_dict["channel_info"]["is_private"]:
-            message_1 = "The share url for this room is"
-            message_2 = f"https://www.clubhouse.com/room/{channel}"
-            announcement = [message_1, message_2]
-
-            send_room_chat(client, channel, announcement)
-            Var.announce_thread = set_announcement(client, channel, announcement, interval)
-
-        if Var.listen_ping_thread:
-            Var.listen_ping_thread.set()
-
-        return join_dict
 
 
 
