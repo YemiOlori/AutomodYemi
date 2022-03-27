@@ -8,14 +8,16 @@ from datetime import datetime
 
 import pytz
 
+
 from . import moderation as mod
+from .chat import chat_client
 
 
 def set_logging_config():
     config_file = "/Users/deon/Documents/GitHub/HQ/config.ini"
     config_object = mod.load_config(config_file)
 
-    logging_config = mod.config_to_dict(config_object, "Logging")
+    logging_config = mod.config_to_dict(config_object, "Logger")
     folder = logging_config.get("folder")
     file = logging_config.get("file")
     level = logging_config.get("level")
@@ -30,10 +32,19 @@ def set_logging_config():
         level=level)
 
 
-def main(announcement=None):
-    set_interval = mod.set_interval
+# @set_interval(180)
+# def track_room_client(client, channel):
+#     join_dict = client.join_channel(channel)
+#     data_dump(join_dict, 'join', channel)
+#
+#     return True
 
-    def set_hello_message(join_info, mod_mode=False, music=False):
+
+def main(announcement=None, music=False, dump_interval=180):
+    set_interval = mod.set_interval
+    set_logging_config()
+
+    def set_hello_message(join_info, mod_mode=False, music_mode=False):
         """Defines which message to send to the room chat upon joining."""
         def request_speak_and_mod():
             message = "If you'd like to use my features, please invite me to speak and make me a Moderator. ✳️"
@@ -53,7 +64,7 @@ def main(announcement=None):
                 message = request_speak_and_mod()
             elif mod_mode and not client.active_mod:
                 message = request_mod()
-            elif music and not client.active_speaker:
+            elif music_mode and not client.active_speaker:
                 message = request_speak()
             return message
 
@@ -107,6 +118,12 @@ def main(announcement=None):
                 if str(_user_id) in client.mod_list:
                     client.mod_guests(channel, _user)
 
+        if client.dump_counter == client.dump_interval:
+            client.data_dump(channel_dict, "channel_dict", channel)
+            client.dump_counter = 0
+
+        client.dump_counter += 1
+
     @set_interval(15)
     def channel_private_club(channel):
         get_client_channel_status(channel, True)
@@ -115,14 +132,17 @@ def main(announcement=None):
         # Make sure that client is active mod before running this function
         channel_dict = client.get_channel_dict(channel)
         user_info = channel_dict.get("user_info")
+        club = str(channel_dict.get("channel_info").get("club"))
 
-        for _user in user_info:
-            _user_id = _user("user_id")
-            client.invite_guests(channel, _user)
-            client.mod_guests(channel, _user)
+        if club in client.social_clubs:
 
-            if _user_id not in client.already_welcomed_list and _user_id not in client.already_in_room_list:
-                client.welcome_guests(channel, _user)
+            for _user in user_info:
+                _user_id = _user("user_id")
+                client.invite_guests(channel, _user)
+                client.mod_guests(channel, _user)
+
+                if _user_id not in client.already_welcomed_list and _user_id not in client.already_in_room_list:
+                    client.welcome_guests(channel, _user)
 
         return True
 
@@ -162,14 +182,23 @@ def main(announcement=None):
         if client.keep_alive_thread:
             client.keep_alive_thread.set()
 
+        if client.chat_client_thread:
+            client.chat_client_thread.set()
+
         client.waiting_ping_thread = listen_channel_ping(client)
 
-        logging.info("mAutomation terminated")
+        logging.info("Automation terminated")
 
         return
 
+    @set_interval(15)
+    def init_chat_client(channel):
+        chat_client(channel)
+        return True
+
     def init_channel(channel):
         client.waiting_ping_thread.set()
+        client.chat_client_thread = init_chat_client(channel)
         join_dict = client.get_join_dict(channel)
         client.audience_reply(channel)
         client.wait_speaker_permission(channel)
@@ -186,6 +215,10 @@ def main(announcement=None):
             client.send_room_chat(channel, hello_message)
             client.active_mod_thread = channel_private_club()
             client.announcement_thread = set_url_announcement(channel, 120)
+            # if join_dict.get("club") in client.social_clubs:
+            #     client.active_mod_thread = channel_public()
+            # else:
+            #     client.active_mod_thread = channel_private_club()
 
         else:
             hello_message = set_hello_message(join_dict)
@@ -197,7 +230,7 @@ def main(announcement=None):
             return False
 
         _user_id = str(notification.get("user_profile").get("user_id"))
-        _user_name = notification.get("user_profile")("name")
+        _user_name = notification.get("user_profile").get("name")
 
         _message = notification.get("message")
 
@@ -230,6 +263,11 @@ def main(announcement=None):
             return False
 
         notifications = client.get_notifications()
+        print(notifications.get("notifications")[0])
+        logging.info(notifications)
+        if not notifications:
+            return True
+
         for notification in notifications.get("notifications"):
             _channel = notification.get("channel")
             respond = set_ping_responder(notification, _channel)
@@ -241,7 +279,9 @@ def main(announcement=None):
         return True
 
     client = mod.ModClient()
+    # client = mod.reload_user()
     client.waiting_ping_thread = listen_channel_ping()
+    client.dump_interval = dump_interval / 15
 
 
 if __name__ == '__main__':
