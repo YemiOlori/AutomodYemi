@@ -131,9 +131,6 @@ def login(client=auto_mod_client):
     return client
 
 
-
-
-
 def mute_audio():
     RTC.muteLocalAudioStream(mute=True)
     return
