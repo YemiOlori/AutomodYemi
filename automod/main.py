@@ -12,37 +12,19 @@ import pytz
 from . import moderation as mod
 from .chat import chat_client
 
-
-# def set_logging_config():
-#     config_file = "/Users/deon/Documents/GitHub/HQ/config.ini"
-#     config_object = mod.load_config(config_file)
-#
-#     logging_config = mod.config_to_dict(config_object, "Logger")
-#     folder = logging_config.get("folder")
-#     file = logging_config.get("file")
-#     level = logging_config.get("level")
-#     filemode = logging_config.get("filemode")
-#     logging.basicConfig(
-#         filename=f"{folder}{file}",
-#         filemode=filemode,
-#         format="%(asctime)s - %(module)s - %(levelname)s - line %(lineno)d - "
-#                "%(funcName)s - %(message)s (Process Details: (%(process)d, "
-#                "%(processName)s) Thread Details: (%(thread)d, %(threadName)s))",
-#         datefmt="%Y-%d-%m %I:%M:%S",
-#         level=level)
+from . import logger
+logger.set_logging_config()
+set_interval = mod.set_interval
 
 
-# @set_interval(180)
-# def track_room_client(client, channel):
-#     join_dict = client.join_channel(channel)
-#     data_dump(join_dict, 'join', channel)
-#
-#     return True
+@set_interval(180)
+def track_room_client(client, channel):
+    join_dict = client.join_channel(channel)
+    mod.ModClient.data_dump(join_dict, 'join', channel)
+    return True
 
 
 def main(announcement=None, music=False, dump_interval=180):
-    set_interval = mod.set_interval
-    set_logging_config()
 
     def set_hello_message(join_info, mod_mode=False, music_mode=False):
         """Defines which message to send to the room chat upon joining."""
@@ -193,13 +175,14 @@ def main(announcement=None, music=False, dump_interval=180):
 
     @set_interval(15)
     def init_chat_client(channel):
+        print(channel)
         chat_client(channel)
         return True
 
-    def init_channel(channel):
+    def init_channel(channel, join_info):
         client.waiting_ping_thread.set()
         client.chat_client_thread = init_chat_client(channel)
-        join_dict = client.get_join_dict(channel)
+        join_dict = join_info
         client.audience_reply(channel)
         client.wait_speaker_permission(channel)
         client.active_ping(channel)
@@ -213,7 +196,7 @@ def main(announcement=None, music=False, dump_interval=180):
         elif join_dict.get("type") == "private" and join_dict.get("club"):
             hello_message = set_hello_message(join_dict, True)
             client.send_room_chat(channel, hello_message)
-            client.active_mod_thread = channel_private_club()
+            client.active_mod_thread = channel_private_club(channel)
             client.announcement_thread = set_url_announcement(channel, 120)
             # if join_dict.get("club") in client.social_clubs:
             #     client.active_mod_thread = channel_public()
@@ -226,12 +209,8 @@ def main(announcement=None, music=False, dump_interval=180):
             client.active_mod_thread = channel_social_or_private()
 
     def set_ping_responder(notification, _channel):
-        if notification.get("type") != 9:
-            return False
 
-        _user_id = str(notification.get("user_profile").get("user_id"))
         _user_name = notification.get("user_profile").get("name")
-
         _message = notification.get("message")
 
         time_created = notification.get("time_created")
@@ -240,11 +219,19 @@ def main(announcement=None, music=False, dump_interval=180):
         time_diff = time_now - time_created
         time_diff = time_diff.total_seconds()
 
-        if not time_diff <= 30 or _user_id not in client.respond_ping_list:
+        if not time_diff <= 600:
             return False
 
-        logging.info(f"Client pinged to {_channel} by {_user_name}: {_message}")
-        return True
+        join = client.join_channel(_channel)
+        if join.get("success"):
+            join_dict = client.get_join_dict(_channel)
+            logging.info(f"Client pinged to {_channel} by {_user_name}: {_message}")
+            return True
+        else:
+            client.attempted_ping_response.append(_channel)
+            return False
+
+        return join_dict
 
     @set_interval(30)
     def listen_channel_ping():
@@ -257,22 +244,33 @@ def main(announcement=None, music=False, dump_interval=180):
         :return decorator:
         :rtype: Dictionary
         """
+
+        logging.info("Waiting for ping")
+
         # Is this active_mod check redundant?
         if client.active_mod:
-            logging.info("moderation_tools.listen_channel_ping Response: Client already active in a channel")
+            logging.info("Response: Client already active in a channel")
+            print("Response: Client already active in a channel")
             return False
 
+        respond = False
         notifications = client.get_notifications()
         if not notifications:
             return True
 
         for notification in notifications.get("notifications"):
-            _channel = notification.get("channel")
-            respond = set_ping_responder(notification, _channel)
-            if respond:
-                # Tell client to go to channel
-                init_channel(_channel)
-                return False
+            if notification.get("type") == 9:
+                _channel = notification.get("channel")
+                _user_id = str(notification.get("user_profile").get("user_id"))
+
+                if _channel not in client.attempted_ping_response and _user_id in client.respond_ping_list:
+                    respond = set_ping_responder(notification, _channel)
+
+                if respond:
+                    # Tell client to go to channel
+                    # client.active_channel = _channel
+                    init_channel(_channel, respond)
+                    return False
 
         return True
 
@@ -280,3 +278,5 @@ def main(announcement=None, music=False, dump_interval=180):
     # client = mod.reload_user()
     client.waiting_ping_thread = listen_channel_ping()
     client.dump_interval = dump_interval / 15
+
+
