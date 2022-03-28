@@ -84,6 +84,17 @@ class Clubhouse:
             return func(self, *args, **kwargs)
         return wrap
 
+    def return_false(func):
+        """ Simple decorator to check for the authentication """
+        @functools.wraps(func)
+        def wrap(self, *args, **kwargs):
+            if not (self.HEADERS.get("CH-UserID") and
+                    self.HEADERS.get("CH-DeviceId") and
+                    self.HEADERS.get("Authorization")):
+                raise Exception('Not Authenticated')
+            return func(self, *args, **kwargs)
+        return wrap
+
     # Remove this decorator as endpoints are testes
     def unstable_endpoint(func):
         """ Simple decorator to warn that this endpoint is never tested at all. """
@@ -504,6 +515,7 @@ class Clubhouse:
             # logging_context (json of some details)
         }
         req = requests.post(f"{self.API_URL}/join_channel", headers=self.HEADERS, json=data)
+        logging.info(data)
         logging.info(req)
         return req.json()
 
