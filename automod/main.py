@@ -13,23 +13,23 @@ from . import moderation as mod
 from .chat import chat_client
 
 
-def set_logging_config():
-    config_file = "/Users/deon/Documents/GitHub/HQ/config.ini"
-    config_object = mod.load_config(config_file)
-
-    logging_config = mod.config_to_dict(config_object, "Logger")
-    folder = logging_config.get("folder")
-    file = logging_config.get("file")
-    level = logging_config.get("level")
-    filemode = logging_config.get("filemode")
-    logging.basicConfig(
-        filename=f"{folder}{file}",
-        filemode=filemode,
-        format="%(asctime)s - %(module)s - %(levelname)s - line %(lineno)d - "
-               "%(funcName)s - %(message)s (Process Details: (%(process)d, "
-               "%(processName)s) Thread Details: (%(thread)d, %(threadName)s))",
-        datefmt="%Y-%d-%m %I:%M:%S",
-        level=level)
+# def set_logging_config():
+#     config_file = "/Users/deon/Documents/GitHub/HQ/config.ini"
+#     config_object = mod.load_config(config_file)
+#
+#     logging_config = mod.config_to_dict(config_object, "Logger")
+#     folder = logging_config.get("folder")
+#     file = logging_config.get("file")
+#     level = logging_config.get("level")
+#     filemode = logging_config.get("filemode")
+#     logging.basicConfig(
+#         filename=f"{folder}{file}",
+#         filemode=filemode,
+#         format="%(asctime)s - %(module)s - %(levelname)s - line %(lineno)d - "
+#                "%(funcName)s - %(message)s (Process Details: (%(process)d, "
+#                "%(processName)s) Thread Details: (%(thread)d, %(threadName)s))",
+#         datefmt="%Y-%d-%m %I:%M:%S",
+#         level=level)
 
 
 # @set_interval(180)
@@ -280,8 +280,3 @@ def main(announcement=None, music=False, dump_interval=180):
     # client = mod.reload_user()
     client.waiting_ping_thread = listen_channel_ping()
     client.dump_interval = dump_interval / 15
-
-
-# if __name__ == '__main__':
-#     set_logging_config()
-#     main()
