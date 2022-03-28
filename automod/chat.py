@@ -32,7 +32,7 @@ class ChatClient(ModClient):
         channel_message_stream = self.get_channel_messages(channel)
 
         command_triggered_list = []
-        for messages in channel_message_stream.get("messages")[:20]:
+        for messages in channel_message_stream.get("messages"):
             message = messages.get("message")
             message_id = messages.get("message_id")
             time_diff = None
@@ -55,8 +55,6 @@ class ChatClient(ModClient):
 
     def check_command(self, channel):
         command_triggered_list = self.get_channel_stream(channel)
-        if not command_triggered_list:
-            return False
 
         ud_prefixes = ["/urban", "/ud"]
         mw_prefixes = ["/def", "/dict"]
@@ -65,15 +63,17 @@ class ChatClient(ModClient):
         urban_dict_list = []
         mw_dict_list = []
         imdb_list = []
-        for messages in command_triggered_list:
-            message = messages("message").lower()
 
-            if message.startswith(tuple(ud_prefixes)):
-                urban_dict_list.append(messages)
-            elif message.startswith(tuple(mw_prefixes)):
-                mw_dict_list.append(messages)
-            elif message.startswith(tuple(imdb_prefixes)):
-                imdb_list.append(messages)
+        if command_triggered_list:
+            for messages in command_triggered_list:
+                message = messages("message").lower()
+
+                if message.startswith(tuple(ud_prefixes)):
+                    urban_dict_list.append(messages)
+                elif message.startswith(tuple(mw_prefixes)):
+                    mw_dict_list.append(messages)
+                elif message.startswith(tuple(imdb_prefixes)):
+                    imdb_list.append(messages)
 
         triggered = {
             "urban_dict": urban_dict_list,
