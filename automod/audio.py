@@ -23,7 +23,7 @@ auto_mod_client = mod.ModClient()
 # Figure this out when you're ready to start playing music
 try:
     import agorartc
-    logging.info("automod.load_agora Imported agorartc")
+    logging.info("Imported agorartc")
     RTC = agorartc.createRtcEngineBridge()
     eventHandler = agorartc.RtcEngineEventHandlerBase()
     RTC.initEventHandler(eventHandler)
@@ -40,10 +40,10 @@ try:
             audio_recording_device_manager.setDevice(_audio_device[2])
             audio_recording_device_manager.setDeviceVolume(50)
             audio_recording_device_result = True
-            logging.info("auto_mod_cli.load_agora Audio recording device set to BlackHole 2ch")
+            logging.info("Audio recording device set to BlackHole 2ch")
             break
     if not audio_recording_device_result:
-        logging.warning("auto_mod_cli.load_agora Audio recording device not set")
+        logging.warning("Audio recording device not set")
 
     # Enhance voice quality
     if RTC.setAudioProfile(
