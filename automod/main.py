@@ -32,7 +32,6 @@ def main(announcement=None, music=False, dump_interval=180):
         if not client_info.get("is_speaker"):
             client.active_speaker = False
             return False
-        client.granted_speaker = True
         client.active_speaker = True
         if client.waiting_speaker_thread:
             client.waiting_speaker_thread.set()
@@ -42,7 +41,6 @@ def main(announcement=None, music=False, dump_interval=180):
         if not client_info.get("is_moderator"):
             client.active_mod = False
             return False
-        client.granted_mod = True
         client.active_mod = True
         if client.waiting_mod_thread:
             client.waiting_mod_thread.set()
@@ -63,13 +61,6 @@ def main(announcement=None, music=False, dump_interval=180):
         elif mod_mode and client.granted_mod and not is_moderator:
             logging.info("Client is no longer mod")
             reset = client.reset_mod(channel)
-
-        else:
-            if client.waiting_speaker_thread:
-                client.waiting_speaker_thread.set()
-
-            if client.waiting_mod_thread:
-                client.waiting_mod_thread.set()
 
         if not reset:
             terminate_channel(channel)
