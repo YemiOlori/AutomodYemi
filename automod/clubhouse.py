@@ -190,18 +190,6 @@ class Clubhouse:
         return req.json()
 
     @require_authentication
-    def get_release_notes(self):
-        """ (Clubhouse) -> dict
-
-        Get release notes.
-        """
-        req = requests.post(f"{self.API_URL}/get_release_notes", headers=self.HEADERS)
-        logging.info(req)
-        return req.json()
-
-
-
-    @require_authentication
     def add_email(self, email):
         """ (Clubhouse, str) -> dict
 
@@ -348,66 +336,6 @@ class Clubhouse:
         return req.json()
 
     @require_authentication
-    def get_suggested_follows_similar(self, user_id='', username=''):
-        """ (Clubhouse, str, str) -> dict
-
-        Get similar users based on the given user.
-        """
-        data = {
-            "user_id": int(user_id) if user_id else None,
-            "username": username if username else None,
-            "query_id": None,
-            "query_result_position": None,
-        }
-        req = requests.post(f"{self.API_URL}/get_suggested_follows_similar", headers=self.HEADERS, json=data)
-        logging.info(req)
-        return req.json()
-
-    @require_authentication
-    def get_suggested_follows_friends_only(self, club_id=None, upload_contacts=True, contacts=()):
-        """ (Clubhouse, int, int, list of dict) -> dict
-
-        Get users based on the phone number.
-        Only seems to be used upon signup.
-        """
-        data = {
-            "club_id": club_id,
-            "upload_contacts": upload_contacts,
-            "contacts": contacts
-        }
-        req = requests.post(f"{self.API_URL}/get_suggested_follows_friends_only", headers=self.HEADERS, json=data)
-        logging.info(req)
-        return req.json()
-
-    @require_authentication
-    def get_suggested_follows_all(self, in_onboarding=True, page_size=50, page=1):
-        """ (Clubhouse, bool, int, int) -> dict
-
-        Get all suggested follows.
-        """
-        query = "in_onboarding={}&page_size={}&page={}".format(
-            "true" if in_onboarding else "false",
-            page_size,
-            page
-        )
-        req = requests.get(f"{self.API_URL}/get_suggested_follows_all?{query}", headers=self.HEADERS)
-        logging.info(req)
-        return req.json()
-
-    @require_authentication
-    def ignore_suggested_follow(self, user_id):
-        """ (Clubhouse, str) -> dict
-
-        Remove user_id from the suggested follow list.
-        """
-        data = {
-            "user_id": int(user_id)
-        }
-        req = requests.post(f"{self.API_URL}/user_id", headers=self.HEADERS, json=data)
-        logging.info(req)
-        return req.json()
-
-    @require_authentication
     def get_event(self, event_id=None, user_ids=None, club_id=None, is_member_only=False, event_hashid=None, description=None, time_start_epoch=None, name=None):
         """ (Clubhouse, int, list, int, bool, int, str, int, str) -> dict
 
@@ -545,16 +473,6 @@ class Clubhouse:
         Receive user's settings.
         """
         req = requests.get(f"{self.API_URL}/get_settings", headers=self.HEADERS)
-        logging.info(req)
-        return req.json()
-
-    @require_authentication
-    def get_welcome_channel(self):
-        """ (Clubhouse) -> dict
-
-        Seems to be called upon sign up. Does not seem to return much data.
-        """
-        req = requests.get(f"{self.API_URL}/get_welcome_channel", headers=self.HEADERS)
         logging.info(req)
         return req.json()
 
@@ -1001,7 +919,6 @@ class Clubhouse:
         logging.info(req)
         return req.json()
 
-
     # What is this?
     @require_authentication
     def get_create_channel_targets(self):
@@ -1011,70 +928,6 @@ class Clubhouse:
         """
         data = {}
         req = requests.post(f"{self.API_URL}/get_create_channel_targets", headers=self.HEADERS, json=data)
-        logging.info(req)
-        return req.json()
-
-    @require_authentication
-    def get_suggested_invites(self, club_id=None, upload_contacts=True, contacts=()):
-        """ (Clubhouse, int, bool, list of dict) -> dict
-
-        Get invitations and user lists based on phone number.
-
-        contacts(dict)
-            - example: [{"name": "Test Name", "phone_number": "+821043219876"}, ...]
-        """
-        data = {
-            "club_id": club_id,
-            "upload_contacts": upload_contacts,
-            "contacts": contacts
-        }
-        req = requests.post(f"{self.API_URL}/get_suggested_invites", headers=self.HEADERS, json=data)
-        logging.info(req)
-        return req.json()
-
-    @require_authentication
-    def get_suggested_club_invites(self, upload_contacts=True, contacts=()):
-        """ (Clubhouse, int, bool, list of dict) -> dict
-
-        Get user lists based on phone number. For inviting clubs.
-
-        contacts(dict)
-            - example: [{"name": "Test Name", "phone_number": "+821043219876"}, ...]
-        """
-        data = {
-            "upload_contacts": upload_contacts,
-            "contacts": contacts
-        }
-        req = requests.post(f"{self.API_URL}/get_suggested_club_invites", headers=self.HEADERS, json=data)
-        logging.info(req)
-        return req.json()
-
-    @require_authentication
-    def invite_to_app(self, name, phone_number, message=None):
-        """ (Clubhouse, str, str, str) -> dict
-
-        Invite users to app. but this only works when you have a leftover invitation.
-        """
-        data = {
-            "name": name,
-            "phone_number": phone_number,
-            "message": message
-        }
-        req = requests.post(f"{self.API_URL}/invite_to_app", headers=self.HEADERS, json=data)
-        logging.info(req)
-        return req.json()
-
-    @require_authentication
-    def invite_from_waitlist(self, user_id):
-        """ (Clubhouse, str, str, str) -> dict
-
-        Invite someone from the waitlist.
-        This is much more reliable than inviting someone by invite_to_app
-        """
-        data = {
-            "user_id": int(user_id),
-        }
-        req = requests.post(f"{self.API_URL}/invite_from_waitlist", headers=self.HEADERS, json=data)
         logging.info(req)
         return req.json()
 
@@ -1368,17 +1221,6 @@ class Clubhouse:
             "email": email
         }
         req = requests.post(f"{self.API_URL}/report_incident", headers=self.HEADERS, json=data)
-        logging.info(req)
-        return req.json()
-
-    @unstable_endpoint
-    @require_authentication
-    def reject_welcome_channel(self):
-        """ (Clubhouse) -> dict
-
-        Unknown
-        """
-        req = requests.get(f"{self.API_URL}/reject_welcome_channel", headers=self.HEADERS)
         logging.info(req)
         return req.json()
 
@@ -1728,7 +1570,6 @@ class Clubhouse:
         logging.info(req)
         return req.json()
 
-
     @require_authentication
     def send_channel_message(self, channel, message):
         """ (Clubhouse, str, str) -> dict
@@ -1743,7 +1584,6 @@ class Clubhouse:
         logging.info(req)
         return req.json()
 
-
     @require_authentication
     def get_backchannel(self):
         """ (Clubhouse, str, str) -> dict
@@ -1753,7 +1593,6 @@ class Clubhouse:
         req = requests.get(f"{self.API_URL}/get_chats", headers=self.HEADERS)
         logging.info(req)
         return req.json()
-
 
     @require_authentication
     def search_backchannel(self, participant_ids):
@@ -1769,7 +1608,6 @@ class Clubhouse:
         logging.info(req)
         return req.json()
 
-
     @require_authentication
     def get_backchannel_messages(self, chat_id):
         """ (Clubhouse, str) -> dict
@@ -1779,7 +1617,6 @@ class Clubhouse:
         req = requests.get(f"{self.API_URL}/get_chat_messages?chat_id={chat_id}", headers=self.HEADERS)
         logging.info(req)
         return req.json()
-
 
     @require_authentication
     def create_backchannel(self, participant_ids):
@@ -1794,7 +1631,6 @@ class Clubhouse:
         req = requests.post(f"{self.API_URL}/create_chat", headers=self.HEADERS, json=data)
         logging.info(req)
         return req.json()
-
 
     @require_authentication
     def get_backchannel_thread(self, participant_ids):
@@ -1815,9 +1651,8 @@ class Clubhouse:
         logging.info(req)
         return req.json
 
-
     @require_authentication
-    def get_chat_id(self, participant_ids):
+    def get_backchannel_id(self, participant_ids):
         chat_id = False
         _search = self.search_backchannel(participant_ids)
         if _search["success"]:
@@ -1829,7 +1664,6 @@ class Clubhouse:
                 chat_id = req["chat_id"]
         logging.info(req)
         return chat_id
-
 
     # Check to see if this is correct
     @require_authentication
@@ -1851,7 +1685,6 @@ class Clubhouse:
         logging.info(req)
         return req.json()
 
-
     @require_authentication
     def update_audio_music_mode(self, channel):
         """ (Clubhouse, str) -> dict
@@ -1866,7 +1699,6 @@ class Clubhouse:
         req = requests.post(f"{self.API_URL}/update_channel_user_status", headers=self.HEADERS, json=data)
         logging.info(req)
         return req.json()
-
 
     @require_authentication
     def add_channel_link(self, channel, link):
