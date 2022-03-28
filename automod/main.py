@@ -263,8 +263,6 @@ def main(announcement=None, music=False, dump_interval=180):
             return False
 
         notifications = client.get_notifications()
-        print(notifications.get("notifications")[0])
-        logging.info(notifications)
         if not notifications:
             return True
 
@@ -284,6 +282,6 @@ def main(announcement=None, music=False, dump_interval=180):
     client.dump_interval = dump_interval / 15
 
 
-if __name__ == '__main__':
-    set_logging_config()
-    main()
+# if __name__ == '__main__':
+#     set_logging_config()
+#     main()
