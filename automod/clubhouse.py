@@ -144,25 +144,6 @@ class Clubhouse:
         logging.info(req)
         return req.json()
 
-    @unstable_endpoint
-    def resend_phone_number_auth(self, phone_number):
-        """ (Clubhouse, str) -> dict
-
-        Resend the verification message
-        """
-        if self.HEADERS.get("Authorization"):
-            raise Exception('Already Authenticated')
-        data = {
-            "tokens": {
-                "rc_token": None,
-                "device_token": None
-            },
-            "phone_number": phone_number
-        }
-        req = requests.post(f"{self.API_URL}/resend_phone_number_auth", headers=self.HEADERS, json=data)
-        logging.info(req)
-        return req.json()
-
     def complete_phone_number_auth(self, phone_number, rc_token, verification_code):
         """ (Clubhouse, str, str, str) -> dict
 
@@ -218,16 +199,7 @@ class Clubhouse:
         logging.info(req)
         return req.json()
 
-    # This is no longer needed
-    # @require_authentication
-    # def check_waitlist_status(self):
-    #     """ (Clubhouse) -> dict
-    #
-    #     Check whether you're still on a waitlist or not.
-    #     """
-    #     req = requests.post(f"{self.API_URL}/check_waitlist_status", headers=self.HEADERS)
-    #     logging.info(req)
-    #     return req.json()
+
 
     @require_authentication
     def add_email(self, email):
