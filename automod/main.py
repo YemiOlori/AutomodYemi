@@ -278,6 +278,6 @@ def main(announcement=None, music=False, dump_interval=180):
     client.waiting_ping_thread = listen_channel_ping()
     client.dump_interval = dump_interval / 15
 
-    just to test
+    
 
 
