@@ -46,7 +46,7 @@ def config_to_list(config_object, section):
     config_section = config_object[section]
     item_list = []
     for item in config_section:
-        item_list.append(item)
+        item_list.append(config_section[item])
     config_section = item_list
     # Return None if section does not exist
     return config_section
@@ -97,7 +97,7 @@ def set_interval(interval):
     :rtype: function
     """
     def decorator(func):
-        # @wraps(func)  # Is this in the right place?
+        @wraps(func)  # Is this in the right place?
         def wrap(*args, **kwargs):
             is_stopped = threading.Event()
 
@@ -171,6 +171,7 @@ class ModClient(Clubhouse):
 
     already_welcomed_list = []
     already_in_room_list = []
+    attempted_ping_response = []
 
     dump_interval = 0
     dump_counter = 0
@@ -180,13 +181,16 @@ class ModClient(Clubhouse):
 
         """
         super().__init__(self.client_id, self.user_token, self.user_device)
+        # self.HEADERS["CH-UserID"] = self.client_id
+        # self.HEADERS["CH-DeviceId"] = self.user_device
+        # self.HEADERS["CH-Authorization"] = self.user_token
 
-    def __repr__(self):
-        pass
+    # def __repr__(self):
+    #     pass
 
     def __str__(self):
         return f"Config: [Clubhouse User ID: {self.client_id}, [Amazon S3 Bucket:" \
-               f"{self.s3_bucket}]"
+               "{self.s3_bucket}]"
 
     def s3_client_dump(self, dump, key):
         """
