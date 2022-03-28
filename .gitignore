@@ -182,13 +182,6 @@ node_modules
 .sass-cache
 
 # Settings Files
-setting.ini
-config.ini
-moderation_tools.log
-automod/setting.ini
-automod/config.ini
 automod/mod_config.py
-automod/moderation_tools.log
 *.ini
 *.log
-automod/moderation.py
