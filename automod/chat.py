@@ -7,11 +7,12 @@ from datetime import datetime
 import fancy_text
 import pytz
 
-from .clubhouse import Clubhouse
+from .moderation import ModClient
 from .moderation import load_config
 from .moderation import config_to_dict
 
-class ChatClient(Clubhouse):
+
+class ChatClient(ModClient):
     def __init__(self):
         """
 
@@ -32,6 +33,7 @@ class ChatClient(Clubhouse):
 
         command_triggered_list = []
         for messages in channel_message_stream.get("messages")[:20]:
+            message = messages.get("message")
             message_id = messages.get("message_id")
             time_diff = None
 
@@ -42,7 +44,10 @@ class ChatClient(Clubhouse):
                 time_diff = time_now - time_created
                 time_diff = time_diff.total_seconds()
 
-            if  time_diff <= 30 and message_id not in self.command_responded_list:
+            if not time_diff:
+                return False
+
+            if time_diff <= 30 and message_id not in self.command_responded_list:
                 command_triggered_list.append(messages)
                 logging.info(f"Channel message command {message}")
 
