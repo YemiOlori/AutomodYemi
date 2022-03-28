@@ -207,7 +207,7 @@ def main(announcement=None, music=False, dump_interval=180):
             hello_message = set_hello_message(join_dict)
             client.send_room_chat(channel, hello_message)
             client.active_mod_thread = channel_social_or_private(channel)
-            
+
     def set_ping_responder(notification, _channel):
 
         time_created = notification.get("time_created")
@@ -277,5 +277,7 @@ def main(announcement=None, music=False, dump_interval=180):
     # client = mod.reload_user()
     client.waiting_ping_thread = listen_channel_ping()
     client.dump_interval = dump_interval / 15
+
+    just to test
 
 
