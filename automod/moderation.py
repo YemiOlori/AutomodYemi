@@ -282,6 +282,40 @@ class ModClient(Clubhouse):
             time.sleep(3)
         return response
 
+    def set_hello_message(join_info, mod_mode=False, music_mode=False):
+        """Defines which message to send to the room chat upon joining."""
+        def request_speak_and_mod():
+            message = "If you'd like to use my features, please invite me to speak and make me a Moderator. ✳️"
+            return message
+
+        def request_mod():
+            message = "If you'd like to use my features, please make me a Moderator. ✳️"
+            return message
+
+        def request_speak():
+            message = "If you'd like to hear music, please invite me to speak. 🎶"
+            return message
+
+        def map_mode():
+            message = None
+            if mod_mode and not client.active_speaker:
+                message = request_speak_and_mod()
+            elif mod_mode and not client.active_mod:
+                message = request_mod()
+            elif music_mode and not client.active_speaker:
+                message = request_speak()
+            return message
+
+        def set_message():
+            message_1 = f"🤖 Hello {join_info.get('creator')}! I'm AutoMod! 🎉"
+            message_2 = map_mode()
+            message = [message_1, message_2] if message_2 else [message_1]
+            return message
+
+        hello_message = set_message()
+
+        return hello_message
+
     def set_announcement(self, channel, message, interval):
         """
         Sends an announcement to the room chat for the active channel each interval
@@ -303,6 +337,15 @@ class ModClient(Clubhouse):
             response = self.send_room_chat(channel, message)
             return response
         return announcement()
+
+    def set_url_announcement(channel, interval):
+        message_1 = "The share url for this room is:"
+        message_2 = f"https://www.clubhouse.com/room/{channel}"
+        message = [message_1, message_2]
+
+        client.send_room_chat(channel, message)
+        response = client.set_announcement(channel, message, interval)
+        return response
 
     def get_join_dict(self, channel):
 
@@ -329,8 +372,12 @@ class ModClient(Clubhouse):
 
         def club():
             _club = join_dict.get("club").get("club_id")
+            logging.info(join_dict.get("club"))
+            logging.info(join_dict.get("club").get("club_id"))
+            return _club
 
         join_dict = self.join_channel(channel)
+
         response_dict = {
             "join_dict": join_dict,
             "type": channel_type(),
@@ -340,52 +387,27 @@ class ModClient(Clubhouse):
         return response_dict
 
     def get_channel_dict(self, channel):
-        """
-        Retrieves information about the active channel
+        """Retrieves information about the active channel"""
 
-        :param client: client
-        :type client: Clubhouse
-        :param channel: The channel id for the active channel
-        :type channel: str
-
-        :return: Dict with information about the active channel
-        :rtype: dict
-        """
-        def speaker_status():
-            if client_info.get("is_speaker"):
-                self.granted_speaker = True
-                self.active_speaker = True
-
-                if self.waiting_speaker_thread:
-                    self.waiting_speaker_thread.set()
-
-        def mod_status():
-            if client_info.get("is_moderator"):
-                self.granted_mod = True
-                self.active_mod = True
-
-                if self.waiting_mod_thread:
-                    self.waiting_mod_thread.set()
-
+        response_dict = {}
         channel_info = self.get_channel(channel)
-        user_info = channel_info.pop("users")
-        response_dict = {"channel_info": channel_info, "user_info": user_info}
+        if channel_info.get("success"):
+            user_info = channel_info.pop("users")
+            response_dict = {"channel_info": channel_info, "user_info": user_info}
 
-        i = 0
-        for user in user_info:
-            if str(user.get("user_id")) == self.client_id:
-                client_info = user_info.pop(i)
-                speaker_status()
-                mod_status()
-                response_dict["client_info"] = client_info
-                break
-            i += 1
+            i = 0
+            for user in user_info:
+                if str(user.get("user_id")) == self.client_id:
+                    client_info = user_info.pop(i)
+                    response_dict["client_info"] = client_info
+                    break
+                i += 1
 
         return response_dict
 
     def accept_speaker_invitation(self, channel):
         accepted = self.accept_speaker_invite(channel, self.client_id)
-        if accepted:
+        if accepted.get("success"):
             self.granted_speaker = True
             self.active_speaker = True
         return accepted
@@ -408,10 +430,14 @@ class ModClient(Clubhouse):
 
         @set_interval(interval)
         def request_rejoin():
+            logging.info("checking for speaker rejoin")
             self.accept_speaker_invitation(channel)
-            if self.granted_speaker:
+            channel_dict = self.get_channel_dict(channel)
+            if channel_dict.get("client_info").get("is_speaker"):
+                logging.info(f"granted_speaker: {self.granted_speaker}")
                 logging.info("Client accepted new speaker invitation")
                 return False
+
             return True
 
         def wait_for_rejoin():
@@ -430,17 +456,21 @@ class ModClient(Clubhouse):
 
         @set_interval(interval)
         def check_mod():
-            self.get_channel_dict(channel)
-            if self.active_speaker:
+            logging.info("checking for speaker rejoin")
+            channel_dict = self.get_channel_dict(channel)
+            if channel_dict.get("client_info").get("is_moderator"):
+                logging.info(f"granted_mod: {self.granted_mod}")
                 logging.info("Client has been re-granted moderator")
                 return False
 
-            def wait_for_mod():
-                thread = threading.Thread(target=check_mod)
-                thread.daemon = True
-                thread.start()
-                # wait here for the result to be available before continuing
-                thread.join(duration)
+            return True
+
+        def wait_for_mod():
+            thread = threading.Thread(target=check_mod)
+            thread.daemon = True
+            thread.start()
+            # wait here for the result to be available before continuing
+            thread.join(duration)
 
             wait_for_mod()
             if self.active_mod:
