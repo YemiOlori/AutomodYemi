@@ -8,12 +8,14 @@ from datetime import datetime
 
 import pytz
 
-
 from . import moderation as mod
 from .chat import chat_client
 
 from . import logger
+
 logger.set_logging_config()
+# Create a logger object.
+
 set_interval = mod.set_interval
 
 
@@ -173,25 +175,27 @@ def main(announcement=None, music=False, dump_interval=180):
 
         return
 
-    @set_interval(15)
+    @set_interval(20)
     def init_chat_client(channel):
-        print(channel)
         chat_client(channel)
         return True
 
     def init_channel(channel, join_info):
-        client.waiting_ping_thread.set()
+        if client.waiting_ping_thread:
+            client.waiting_ping_thread.set()
+
         client.chat_client_thread = init_chat_client(channel)
+        client.get_channel_dict(channel)
+
         join_dict = join_info
-        client.audience_reply(channel)
-        client.wait_speaker_permission(channel)
+        client.waiting_speaker_thread = client.wait_speaker_permission(channel)
         client.active_ping(channel)
         client.keep_alive_thread = client.keep_alive_ping(channel)
 
         if join_dict.get("type") == "public":
             hello_message = set_hello_message(join_dict, True)
             client.send_room_chat(channel, hello_message)
-            client.active_mod_thread = channel_public()
+            client.active_mod_thread = channel_public(channel)
 
         elif join_dict.get("type") == "private" and join_dict.get("club"):
             hello_message = set_hello_message(join_dict, True)
@@ -206,12 +210,16 @@ def main(announcement=None, music=False, dump_interval=180):
         else:
             hello_message = set_hello_message(join_dict)
             client.send_room_chat(channel, hello_message)
-            client.active_mod_thread = channel_social_or_private()
+            client.active_mod_thread = channel_social_or_private(channel)
 
     def set_ping_responder(notification, _channel):
-
+        _user_id = str(notification.get("user_profile").get("user_id"))
         _user_name = notification.get("user_profile").get("name")
         _message = notification.get("message")
+
+        if _channel in client.attempted_ping_response or _user_id not in client.respond_ping_list:
+            logging.info("Unauthorized Ping")
+            return False
 
         time_created = notification.get("time_created")
         time_created = datetime.strptime(time_created, '%Y-%m-%dT%H:%M:%S.%f%z')
@@ -219,19 +227,17 @@ def main(announcement=None, music=False, dump_interval=180):
         time_diff = time_now - time_created
         time_diff = time_diff.total_seconds()
 
-        if not time_diff <= 600:
+        if not time_diff <= 1800:
             return False
 
-        join = client.join_channel(_channel)
-        if join.get("success"):
-            join_dict = client.get_join_dict(_channel)
+        join = client.get_join_dict(_channel)
+        if join.get("join_dict").get("success"):
             logging.info(f"Client pinged to {_channel} by {_user_name}: {_message}")
-            return True
         else:
             client.attempted_ping_response.append(_channel)
             return False
 
-        return join_dict
+        return join
 
     @set_interval(30)
     def listen_channel_ping():
@@ -250,7 +256,6 @@ def main(announcement=None, music=False, dump_interval=180):
         # Is this active_mod check redundant?
         if client.active_mod:
             logging.info("Response: Client already active in a channel")
-            print("Response: Client already active in a channel")
             return False
 
         respond = False
@@ -258,13 +263,10 @@ def main(announcement=None, music=False, dump_interval=180):
         if not notifications:
             return True
 
-        for notification in notifications.get("notifications"):
+        for notification in notifications.get("notifications")[:5]:
             if notification.get("type") == 9:
                 _channel = notification.get("channel")
-                _user_id = str(notification.get("user_profile").get("user_id"))
-
-                if _channel not in client.attempted_ping_response and _user_id in client.respond_ping_list:
-                    respond = set_ping_responder(notification, _channel)
+                respond = set_ping_responder(notification, _channel)
 
                 if respond:
                     # Tell client to go to channel
