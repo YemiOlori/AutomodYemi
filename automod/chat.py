@@ -55,6 +55,9 @@ class ChatClient(ModClient):
 
     def check_command(self, channel):
         command_triggered_list = self.get_channel_stream(channel)
+        if not command_triggered_list:
+            return False
+
         ud_prefixes = ["/urban", "/ud"]
         mw_prefixes = ["/def", "/dict"]
         imdb_prefixes = ["/imdb"]
@@ -196,25 +199,3 @@ def chat_client(channel):
 
     if message_list.get("urban_dict"):
         ud_client.urban_dict(channel, message_list.get("urban_dict"))
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
