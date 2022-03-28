@@ -356,10 +356,16 @@ class ModClient(Clubhouse):
                 self.granted_speaker = True
                 self.active_speaker = True
 
+                if self.waiting_speaker_thread:
+                    self.waiting_speaker_thread.set()
+
         def mod_status():
             if client_info.get("is_moderator"):
                 self.granted_mod = True
                 self.active_mod = True
+
+                if self.waiting_mod_thread:
+                    self.waiting_mod_thread.set()
 
         channel_info = self.get_channel(channel)
         user_info = channel_info.pop("users")
@@ -390,9 +396,11 @@ class ModClient(Clubhouse):
 
         Function that runs when you've requested for a voice permission.
         """
+
         accept = self.accept_speaker_invitation(channel)
-        if accept.get("success"):
+        if self.active_speaker or accept.get("success"):
             return False
+
         return True
 
     def reset_speaker(self, channel, interval=10, duration=120):
