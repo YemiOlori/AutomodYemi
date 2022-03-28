@@ -183,5 +183,7 @@ node_modules
 
 # Settings Files
 automod/mod_config.py
+automod/logger.py
 *.ini
 *.log
+
