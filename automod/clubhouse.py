@@ -516,7 +516,7 @@ class Clubhouse:
         }
         req = requests.post(f"{self.API_URL}/join_channel", headers=self.HEADERS, json=data)
         logging.info(data)
-        logging.info(req)
+        logging.info(req.json())
         return req.json()
 
     @require_authentication
@@ -697,7 +697,7 @@ class Clubhouse:
         Get list of channels, current invite status, etc.
         """
         req = requests.get(f"{self.API_URL}/get_feed?", headers=self.HEADERS)
-        logging.info(req)
+        logging.info(req.json)
         return req.json()
 
     # This endpoint may longer work
@@ -708,7 +708,7 @@ class Clubhouse:
         Get list of channels, based on the server's channel selection algorithm
         """
         req = requests.get(f"{self.API_URL}/get_channels", headers=self.HEADERS)
-        logging.info(req)
+        logging.info(req.json())
         return req.json()
 
     @require_authentication
@@ -722,8 +722,12 @@ class Clubhouse:
             "channel_id": channel_id
         }
         req = requests.post(f"{self.API_URL}/get_channel", headers=self.HEADERS, json=data)
-        logging.info(req)
-        return req.json()
+        req_json = req.json()
+        logging.info(req_json)
+        if req_json.get("should_leave"):
+            raise Exception
+
+        return req_json
 
     @require_authentication
     def active_ping(self, channel):
