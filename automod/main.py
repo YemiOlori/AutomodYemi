@@ -28,64 +28,59 @@ def track_room_client(client, channel):
 
 def main(announcement=None, music=False, dump_interval=180):
 
-    def set_hello_message(join_info, mod_mode=False, music_mode=False):
-        """Defines which message to send to the room chat upon joining."""
-        def request_speak_and_mod():
-            message = "If you'd like to use my features, please invite me to speak and make me a Moderator. ✳️"
-            return message
+    def speaker_status(client_info):
+        if not client_info.get("is_speaker"):
+            client.active_speaker = False
+            return False
+        client.granted_speaker = True
+        client.active_speaker = True
+        if client.waiting_speaker_thread:
+            client.waiting_speaker_thread.set()
+        return True
 
-        def request_mod():
-            message = "If you'd like to use my features, please make me a Moderator. ✳️"
-            return message
-
-        def request_speak():
-            message = "If you'd like to hear music, please invite me to speak. 🎶"
-            return message
-
-        def map_mode():
-            message = None
-            if mod_mode and not client.active_speaker:
-                message = request_speak_and_mod()
-            elif mod_mode and not client.active_mod:
-                message = request_mod()
-            elif music_mode and not client.active_speaker:
-                message = request_speak()
-            return message
-
-        def set_message():
-            message_1 = f"🤖 Hello {join_info.get('creator')}! I'm AutoMod! 🎉"
-            message_2 = map_mode()
-            message = [message_1, message_2] if message_2 else [message_1]
-            return message
-
-        hello_message = set_message()
-
-        return hello_message
-
-    def set_url_announcement(channel, interval):
-        message_1 = "The share url for this room is:"
-        message_2 = f"https://www.clubhouse.com/room/{channel}"
-        message = [message_1, message_2]
-
-        client.send_room_chat(channel, message)
-        response = client.set_announcement(channel, message, interval)
-        return response
+    def mod_status(client_info):
+        if not client_info.get("is_moderator"):
+            client.active_mod = False
+            return False
+        client.granted_mod = True
+        client.active_mod = True
+        if client.waiting_mod_thread:
+            client.waiting_mod_thread.set()
+        return True
 
     def get_client_channel_status(channel, mod_mode=False):
+        channel_dict = client.get_channel_dict(channel)
+        client_info = channel_dict.get("client_info")
+
+        is_speaker = speaker_status(client_info)
+        is_moderator = mod_status(client_info)
+
         reset = False
-        if not client.active_speaker:
+        if client.granted_speaker and not is_speaker:
+            logging.info("Client is no longer speaker")
             reset = client.reset_speaker(channel)
-        elif mod_mode and not client.active_mod:
+
+        elif mod_mode and client.granted_mod and not is_moderator:
+            logging.info("Client is no longer mod")
             reset = client.reset_mod(channel)
+
+        else:
+            if client.waiting_speaker_thread:
+                client.waiting_speaker_thread.set()
+
+            if client.waiting_mod_thread:
+                client.waiting_mod_thread.set()
+
         if not reset:
             terminate_channel(channel)
 
+        return channel_dict
+
     @set_interval(15)
     def channel_public(channel):
-        get_client_channel_status(channel, True)
+        channel_dict = get_client_channel_status(channel, True)
         # Make sure that client is active speaker before running this function
         # Make sure that client is active mod before running this function
-        channel_dict = client.get_channel_dict(channel)
         user_info = channel_dict.get("user_info")
         club = channel_dict.get("channel_info").get("club").get("club_id")
 
@@ -110,11 +105,11 @@ def main(announcement=None, music=False, dump_interval=180):
 
     @set_interval(15)
     def channel_private_club(channel):
-        get_client_channel_status(channel, True)
+        channel_dict = get_client_channel_status(channel, True)
 
         # Make sure that client is active speaker before running this function
         # Make sure that client is active mod before running this function
-        channel_dict = client.get_channel_dict(channel)
+        # channel_dict = client.get_channel_dict(channel)
         user_info = channel_dict.get("user_info")
         club = str(channel_dict.get("channel_info").get("club"))
 
@@ -132,14 +127,14 @@ def main(announcement=None, music=False, dump_interval=180):
 
     @set_interval(15)
     def channel_social_or_private(channel):
-        get_client_channel_status(channel)
+        channel_dict = get_client_channel_status(channel)
         # Make sure that client is active speaker before running this function
         # Make sure that client is active mod before running this function
-        channel_dict = client.get_channel_dict(channel)
+        # channel_dict = client.get_channel_dict(channel)
         user_info = channel_dict.get("user_info")
 
         for _user in user_info:
-            _user_id = _user("user_id")
+            _user_id = _user.get("user_id")
             if _user_id not in client.already_welcomed_list and _user_id not in client.already_in_room_list:
                 client.welcome_guests(channel, _user)
 
@@ -169,7 +164,7 @@ def main(announcement=None, music=False, dump_interval=180):
         if client.chat_client_thread:
             client.chat_client_thread.set()
 
-        client.waiting_ping_thread = listen_channel_ping(client)
+        client.waiting_ping_thread = listen_channel_ping()
 
         logging.info("Automation terminated")
 
@@ -208,18 +203,12 @@ def main(announcement=None, music=False, dump_interval=180):
             #     client.active_mod_thread = channel_private_club()
 
         else:
+            logging.info(f"join_dict: {join_dict}")
             hello_message = set_hello_message(join_dict)
             client.send_room_chat(channel, hello_message)
             client.active_mod_thread = channel_social_or_private(channel)
-
+            
     def set_ping_responder(notification, _channel):
-        _user_id = str(notification.get("user_profile").get("user_id"))
-        _user_name = notification.get("user_profile").get("name")
-        _message = notification.get("message")
-
-        if _channel in client.attempted_ping_response or _user_id not in client.respond_ping_list:
-            logging.info("Unauthorized Ping")
-            return False
 
         time_created = notification.get("time_created")
         time_created = datetime.strptime(time_created, '%Y-%m-%dT%H:%M:%S.%f%z')
@@ -227,7 +216,15 @@ def main(announcement=None, music=False, dump_interval=180):
         time_diff = time_now - time_created
         time_diff = time_diff.total_seconds()
 
-        if not time_diff <= 1800:
+        if not time_diff <= 30:
+            return False
+
+        _user_id = str(notification.get("user_profile").get("user_id"))
+        _user_name = notification.get("user_profile").get("name")
+        _message = notification.get("message")
+
+        if _channel in client.attempted_ping_response or _user_id not in client.respond_ping_list:
+            logging.info("Unauthorized Ping")
             return False
 
         join = client.get_join_dict(_channel)
@@ -266,12 +263,12 @@ def main(announcement=None, music=False, dump_interval=180):
         for notification in notifications.get("notifications")[:5]:
             if notification.get("type") == 9:
                 _channel = notification.get("channel")
-                respond = set_ping_responder(notification, _channel)
+                join = set_ping_responder(notification, _channel)
 
-                if respond:
+                if join:
                     # Tell client to go to channel
                     # client.active_channel = _channel
-                    init_channel(_channel, respond)
+                    init_channel(_channel, join)
                     return False
 
         return True
