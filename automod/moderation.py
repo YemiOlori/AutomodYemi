@@ -12,12 +12,11 @@ from datetime import datetime
 from configparser import ConfigParser
 from functools import wraps
 
-
 import pytz
 import boto3
 
+# from . import clubhouse
 from .clubhouse import Clubhouse
-
 
 def load_config(config_file=""):
     """A function to read the config file."""
@@ -180,7 +179,8 @@ class ModClient(Clubhouse):
         """
 
         """
-        super().__init__(self.client_id, self.user_token, self.user_device)
+        super().__init__()
+        # super().__init__(self.client_id, self.user_token, self.user_device)
         # self.HEADERS["CH-UserID"] = self.client_id
         # self.HEADERS["CH-DeviceId"] = self.user_device
         # self.HEADERS["CH-Authorization"] = self.user_token
