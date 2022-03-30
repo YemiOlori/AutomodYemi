@@ -13,13 +13,12 @@ from .audio import AudioClient as Audio
 from .chat import ChatClient as Chat
 
 
-set_interval = Mod.set_interval
-
-
 class AutoModClient(Mod, Audio, Chat):
 
     def __init__(self):
         super().__init__()
+
+    set_interval = super().set_interval
 
     @set_interval(180)
     def track_room_client(self, channel):
@@ -145,12 +144,12 @@ class AutoModClient(Mod, Audio, Chat):
         if self.waiting_ping_thread:
             self.waiting_ping_thread.set()
 
-        self.chat_client_thread = init_chat_client(channel)
+        self.chat_client_thread = self.init_chat_client(channel)
         self.get_channel_dict(channel)
 
         join_dict = join_info
         self.waiting_speaker_thread = self.wait_speaker_permission(channel)
-        self.active_ping(channel)
+        self.channel.active_ping()
         self.keep_alive_thread = self.keep_alive_ping(channel)
 
         if join_dict.get("type") == "public":
