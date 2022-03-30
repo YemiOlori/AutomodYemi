@@ -10,16 +10,16 @@ Config:
     config_to_list(config_object, section)
     reload_client()
 
-Auth:
+Auth(Config):
 	start_auth(self, phone_number)
 	resend_auth(self, phone_number)
 	complete_auth(self, phone_number, rc_token, verification_code)
 	logout(self)
 
-Clubhouse:
+Clubhouse(Auth):
     set_interval(interval)
 
-Client:
+Client(Auth):
 	client.me(self, return_blocked_ids=False, timezone_identifier="Asia/Tokyo", return_following_ids=False)
 	client.feed(self)
 	client.profile(self, client_id='', username='')
@@ -45,7 +45,7 @@ Client:
 	client.refresh_token(self, refresh_token)
 	client.report_incident(self, client_id, channel, incident_type, incident_description, email)
 
-User:
+User(Auth):
     user.get_profile(self, user_id='', username='')
     user.follow(self, user_id, user_ids=None, source=4, source_topic_id=None)
 	user.unfollow(self, user_id)
@@ -56,12 +56,12 @@ User:
     user.block(self, user_id)
     user.get_events_for_user(self, user_id='', page_size=25, page=1)
 
-Notifications:
+Notifications(Auth):
     notifications.get(self, page_size=20, page=1)
     notifications.get_actionable(self)
     notifications.ignore_actionable(self, actionable_notification_id)
 
-Channel:
+Channel(Auth):
     channel.get(self, channel, channel_id=None)
     channel.join(self, channel, attribution_source="feed", attribution_details="eyJpc19leHBsb3JlIjpmYWxzZSwicmFuayI6MX0=")
     channel.audience_reply(self, channel, raise_hands=True, unraise_hands=False)
@@ -78,7 +78,7 @@ Channel:
     channel.hide(self, channel, hide=True)
     channel.get_create_channel_targets(self)
 
-ChannelMod:
+ChannelMod(Auth):
     mod.make_moderator(self, channel, user_id)
     mod.invite_speaker(self, channel, user_id)
     mod.uninite_speaker(self, channel, user_id)
@@ -90,11 +90,11 @@ ChannelMod:
     mod.remove_user(self, channel, user_id)
     mod.change_handraising(self, channel, is_enabled=True, handraise_permission=1)
 
-ChannelChat:
+ChannelChat(Auth):
     chat.get(self, channel)
     chat.send(self, channel, message)
 
-Message:
+Message(Auth):
     message.get_feed(self)
 	message.create(self, participant_ids)
     message.search_(self, participant_ids)
@@ -103,7 +103,7 @@ Message:
     message.get_message_id(self, participant_ids)
     message.send(self, message, chat_id=None, participant_ids=None)
 
-Event:
+Event(Auth):
     event.get(self, event_id=None, user_ids=None, club_id=None, is_member_only=False, event_hashid=None, description=None, time_start_epoch=None, name=None)
     event.create(self, name, time_start_epoch, description, event_id=None, user_ids=(), club_id=None, is_member_only=False, event_hashid=None)
     event.edit(self, name, time_start_epoch, description, event_id=None, user_ids=(), club_id=None, is_member_only=False, event_hashid=None)
@@ -112,7 +112,7 @@ Event:
     event.get_events_to_start(self)
     event.get_events_for_user(self, user_id='', page_size=25, page=1)
 
-Club:
+Club(Auth):
     club.get(self, club_id, source_topic_id=None)
     club.get_members(self, club_id, return_followers=False, return_members=True, page_size=50, page=1)
     club.join(self, club_id, source_topic_id=None)
@@ -133,15 +133,73 @@ Club:
     club.update_club_description(self, club_id, description)
     club.update_club_rules(self, club_id='', rules=())
 
-Topic:
+Topic(Auth):
     topic.get_all_topics(self)
     topic.get_topic(self, topic_id)
     topic.get_users_for_topic(self, topic_id, page_size=25, page=1)
     topic.get_clubs_for_topic(self, topic_id, page_size=25, page=1)
 
 
+moderator.py
+
+ModClient(Clubhouse):
+    s3_client_dump(self, dump, key)
+    data_dump(self, dump, source, channel="")
+    keep_alive_ping(self, channel)
+    send_room_chat(self, channel, message=str or list)
+    set_hello_message(self, join_info, mod_mode=False, music_mode=False)
+    set_announcement(self, channel, message, interval)
+    get_join_dict(self, channel)
+    get_channel_dict(self, channel)
+    accept_speaker_invitation(self, channel)
+    wait_speaker_permission(self, channel)
+    reset_speaker(self, channel, interval=10, duration=120)
+    reset_mod(self, channel, interval=10, duration=120)
+    welcome_guests(self, channel, user_info)
+    invite_guests(self, channel, user_info)
+    mod_guests(self, channel, user_info)
+
+chat.py
+
+AuthChatClient(Clubhouse):
+    get_chat_stream(self, channel, chat_stream=None)
+    check_command(triggers=None)
+    get_definition(self, term)
+    urban_dict_trigger(self, message_list)
+    urban_dict(self, channel, message_list)
 
 
+audio.py
+
+AudioClient(Clubhouse):
+    mute_audio(self)
+    unmute_audio(self)
+    start_music(self, channel, join_dict, task=None, announcement=None, interval=3600)
+    terminate_music(self, channel)
+
+
+main.py
+
+AutoModClient(Mod, Audio, Chat):
+    track_room_client(self, channel)
+    chat_client(self, channel, chat_stream=None)
+    speaker_status(self, client_info)
+    mod_status(self, client_info)
+    get_client_channel_status(self, channel, mod_mode=False)
+    channel_public(self, channel)
+    channel_private_club(self, channel)
+    terminate_channel(self, channel)
+    init_channel(self, channel, join_info)
+    set_ping_responder(self, notification, _channel)
+    listen_channel_ping(self)
+
+main(announcement=None, music=False, dump_interval=180)
+
+
+cli.py
+
+AutoMod(AutoModClient):
+    get_hallway(self, max_limit=30)
 
 
 
