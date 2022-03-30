@@ -16,8 +16,7 @@ class AuthChatClient(Clubhouse):
     }
 
     def __init__(self):
-        super().__init__()
-        self.command_responded_list = []
+        self.clubhouse_chat = super().__init__()
 
 
 class ChatClient(AuthChatClient):
@@ -28,6 +27,7 @@ class ChatClient(AuthChatClient):
         super().__init__()
         self.UrbanDict = UrbanDict()
         self.URBAN_DICT_API_URL = UrbanDict.URBAN_DICT_API_URL
+        self.command_responded_list = []
 
     def __str__(self):
         """
@@ -37,7 +37,10 @@ class ChatClient(AuthChatClient):
 
     def get_chat_stream(self, channel, chat_stream=None):
         if channel and not chat_stream:
-            message_stream = self.message.get(channel)
+            chat_stream = self.chat.get_chat(channel)
+
+        if not isinstance(chat_stream, dict):
+            return False
 
         command_triggered_list = []
         for messages in chat_stream.get("messages"):
@@ -151,6 +154,7 @@ class UrbanDict(AuthChatClient):
         return definition
 
     def urban_dict_trigger(self, message_list):
+
         urban_dict_requests = []
         for messages in message_list:
             message_id = messages.get("message_id")
@@ -179,10 +183,13 @@ class UrbanDict(AuthChatClient):
 
         return urban_dict_requests if len(urban_dict_requests) > 0 else False
 
-    def urban_dict(self, channel, message_list):
-        urban_dict_requests = self.urban_dict_trigger(message_list)
-        if not urban_dict_requests:
+    def urban_dict(self, channel, message_dict):
+        urban_dict_commands = message_dict.get("urban_dict")
+
+        if not urban_dict_commands:
             return False
+
+        urban_dict_requests = self.urban_dict_trigger(urban_dict_commands)
 
         for request in urban_dict_requests:
             term = request.get("term")
