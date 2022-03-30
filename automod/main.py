@@ -8,26 +8,29 @@ from datetime import datetime
 
 import pytz
 
+from .clubhouse import Clubhouse
 from .moderator import ModClient as Mod
 from .audio import AudioClient as Audio
 from .chat import ChatClient as Chat
 
+set_interval = Mod.set_interval
 
-class AutoModClient(Mod, Audio, Chat):
+
+class AutoModClient(Mod, Chat, Audio):
 
     def __init__(self):
         super().__init__()
 
-    set_interval = super().set_interval
-
     @set_interval(180)
     def track_room_client(self, channel):
-        join_dict = self.channel.join(channel)
-        AutoModClient.data_dump(join_dict, 'join', channel)
+        join_dict = self.channel.join_channel(channel)
+        AutoModClient.data_dump(join_dict, 'join_channel', channel)
         return True
 
     def chat_client(self, channel, chat_stream=None):
         chat_triggers = self.get_chat_stream(channel, chat_stream)
+        if not chat_triggers:
+            return False
         trigger_dict = self.check_command(chat_triggers)
         self.UrbanDict.urban_dict(channel, trigger_dict)
         return True
@@ -124,7 +127,7 @@ class AutoModClient(Mod, Audio, Chat):
                 self.welcome_guests(channel, _user)
 
     def terminate_channel(self, channel):
-        self.channel.leave(channel)
+        self.channel.leave_channel(channel)
 
         status_list = ["active_speaker", "waiting_speaker", "active_mod", "waiting_mod"]
         for status in status_list:
@@ -144,12 +147,12 @@ class AutoModClient(Mod, Audio, Chat):
         if self.waiting_ping_thread:
             self.waiting_ping_thread.set()
 
-        self.chat_client_thread = self.init_chat_client(channel)
-        self.get_channel_dict(channel)
+        channel_dict = self.get_channel_dict(channel)
+        client_dict = channel_dict.get("client_info")
 
         join_dict = join_info
-        self.waiting_speaker_thread = self.wait_speaker_permission(channel)
-        self.channel.active_ping()
+        self.waiting_speaker_thread = self.wait_speaker_permission(channel, client_dict)
+        self.channel.active_ping(channel)
         self.keep_alive_thread = self.keep_alive_ping(channel)
 
         if join_dict.get("type") == "public":
@@ -221,7 +224,7 @@ class AutoModClient(Mod, Audio, Chat):
             return False
 
         respond = False
-        notifications = self.get_notifications()
+        notifications = self.notifications.get_notifications()
         if not notifications:
             return True
 
@@ -238,12 +241,9 @@ class AutoModClient(Mod, Audio, Chat):
 
         return True
 
-
-def main(announcement=None, music=False, dump_interval=180):
-
-    client = AutoModClient()
-    client.waiting_ping_thread = client.listen_channel_ping()
-    client.dump_interval = dump_interval / 15
+    def init_automod(self, announcement=None, music=False, dump_interval=180):
+        self.waiting_ping_thread = self.listen_channel_ping()
+        self.dump_interval = dump_interval / 15
 
     
 
