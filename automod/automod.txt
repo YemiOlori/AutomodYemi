@@ -1,0 +1,150 @@
+clubhouse.py
+
+requires_authentication
+unstable_endpoint
+
+Config:
+    load_config(config_file="")
+    section_key_exception(config_object, section)
+    config_to_dict(config_object, section, item=None)
+    config_to_list(config_object, section)
+    reload_client()
+
+Auth:
+	start_auth(self, phone_number)
+	resend_auth(self, phone_number)
+	complete_auth(self, phone_number, rc_token, verification_code)
+	logout(self)
+
+Clubhouse:
+    set_interval(interval)
+
+Client:
+	client.me(self, return_blocked_ids=False, timezone_identifier="Asia/Tokyo", return_following_ids=False)
+	client.feed(self)
+	client.profile(self, client_id='', username='')
+	client.ping_user(self, channel, user_id)
+	client.following(self, client_id, page_size=50, page=1)
+	client.followers(self, client_id, page_size=50, page=1)
+	client.search(self, query, followers_only=False, following_only=False, cofollows_only=False)
+	client.get_clubs(self, is_startable_only=False)
+	client.get_online_friends(self)
+	client.get_settings(self)
+	client.add_email(self, email)
+	client.add_topic(self, club_id=None, topic_id=None)
+	client.remove_topic(self, club_id, topic_id)
+	client.update_photo(self, photo_filename)
+	client.update_bio(self, bio)``
+	client.update_name(self, name)
+	client.update_username(self, username)
+	client.update_displayname(self, name)
+	client.update_twitter_username(self, username, twitter_token, twitter_secret)
+	client.update_instagram_username(self, code)
+	client.update_skintone(self, skintone=1)
+	client.update_follow_notifications(self, client_id, notification_type=2)
+	client.refresh_token(self, refresh_token)
+	client.report_incident(self, client_id, channel, incident_type, incident_description, email)
+
+User:
+    user.get_profile(self, user_id='', username='')
+    user.follow(self, user_id, user_ids=None, source=4, source_topic_id=None)
+	user.unfollow(self, user_id)
+    user.follow_multiple(self, user_ids, user_id=None, source=7, source_topic_id=None)
+    user.following(self, user_id, page_size=50, page=1)
+    user.followers(self, user_id, page_size=50, page=1)
+    user.mutual_follows(self, user_id, page_size=50, page=1)
+    user.block(self, user_id)
+    user.get_events_for_user(self, user_id='', page_size=25, page=1)
+
+Notifications:
+    notifications.get(self, page_size=20, page=1)
+    notifications.get_actionable(self)
+    notifications.ignore_actionable(self, actionable_notification_id)
+
+Channel:
+    channel.get(self, channel, channel_id=None)
+    channel.join(self, channel, attribution_source="feed", attribution_details="eyJpc19leHBsb3JlIjpmYWxzZSwicmFuayI6MX0=")
+    channel.audience_reply(self, channel, raise_hands=True, unraise_hands=False)
+    channel.accept_speaker_invite(self, channel, client_id)
+    channel.reject_speaker_invite(self, channel, client_id)
+    channel.update_audio_mode(self, channel)
+    channel.active_ping(self, channel)
+    channel.leave(self, channel)
+    channel.create(self, topic="", user_ids=(), is_private=False, is_social_mode=False)
+    channel.invite_to_new_channel(self, user_id, channel)
+    channel.accept_new_channel_invite(self, channel_invite_id)
+    channel.reject_new_channel_invite(self, channel_invite_id)
+    channel.cancel_new_channel_invite(self, channel_invite_id)
+    channel.hide(self, channel, hide=True)
+    channel.get_create_channel_targets(self)
+
+ChannelMod:
+    mod.make_moderator(self, channel, user_id)
+    mod.invite_speaker(self, channel, user_id)
+    mod.uninite_speaker(self, channel, user_id)
+    mod.add_link(self, channel, link)
+    mod.remove_link(self, channel)
+    mod.make_public(self, channel, channel_id=None)
+    mod.make_social(self, channel, channel_id=None)
+    mod.end(self, channel, channel_id=None)
+    mod.remove_user(self, channel, user_id)
+    mod.change_handraising(self, channel, is_enabled=True, handraise_permission=1)
+
+ChannelChat:
+    chat.get(self, channel)
+    chat.send(self, channel, message)
+
+Message:
+    message.get_feed(self)
+	message.create(self, participant_ids)
+    message.search_(self, participant_ids)
+	message.get_message(self, chat_id)
+    message.get_message_thread(self, participant_ids)
+    message.get_message_id(self, participant_ids)
+    message.send(self, message, chat_id=None, participant_ids=None)
+
+Event:
+    event.get(self, event_id=None, user_ids=None, club_id=None, is_member_only=False, event_hashid=None, description=None, time_start_epoch=None, name=None)
+    event.create(self, name, time_start_epoch, description, event_id=None, user_ids=(), club_id=None, is_member_only=False, event_hashid=None)
+    event.edit(self, name, time_start_epoch, description, event_id=None, user_ids=(), club_id=None, is_member_only=False, event_hashid=None)
+    event.delete(self, event_id, user_ids=None, club_id=None, is_member_only=False, event_hashid=None, description=None, time_start_epoch=None, name=None)
+    event.get_events(self, is_filtered=True, page_size=25, page=1)
+    event.get_events_to_start(self)
+    event.get_events_for_user(self, user_id='', page_size=25, page=1)
+
+Club:
+    club.get(self, club_id, source_topic_id=None)
+    club.get_members(self, club_id, return_followers=False, return_members=True, page_size=50, page=1)
+    club.join(self, club_id, source_topic_id=None)
+    club.leave(self, club_id, source_topic_id=None)
+    club.add_club_admin(self, club_id, user_id)
+    club.remove_club_admin(self, club_id, user_id)
+    club.remove_club_member(self, club_id, user_id)
+    club.accept_club_member_invite(self, club_id, source_topic_id=None, invite_code=None)
+    club.add_club_member(self, club_id, user_id, name, phone_number, message, reason)
+    club.get_club_nominations(self, club_id, source_topic_id)
+    club.approve_club_nomination(self, club_id, source_topic_id, invite_nomination_id)
+    club.reject_club_nomination(self, club_id, source_topic_id, invite_nomination_id)
+    club.add_club_topic(self, club_id, topic_id)
+    club.remove_club_topic(self, club_id, topic_id)
+    club.update_is_follow_allowed(self, club_id, is_follow_allowed=True)
+    club.update_is_membership_private(self, club_id, is_membership_private=False)
+    club.update_is_community(self, club_id, is_community=False)
+    club.update_club_description(self, club_id, description)
+    club.update_club_rules(self, club_id='', rules=())
+
+Topic:
+    topic.get_all_topics(self)
+    topic.get_topic(self, topic_id)
+    topic.get_users_for_topic(self, topic_id, page_size=25, page=1)
+    topic.get_clubs_for_topic(self, topic_id, page_size=25, page=1)
+
+
+
+
+
+
+
+
+
+
