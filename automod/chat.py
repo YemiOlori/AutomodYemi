@@ -9,7 +9,7 @@ from .clubhouse import Config
 from .clubhouse import Clubhouse
 
 
-class AuthRapidAPI(Clubhouse):
+class AuthChatClient(Clubhouse):
     RAPID_API_HEADERS = {
         "X-RapidAPI-Host": Config.config_to_dict(Config.load_config(), "RapidAPI", "host"),
         "X-RapidAPI-Key": Config.config_to_dict(Config.load_config(), "RapidAPI", "key")
@@ -20,7 +20,7 @@ class AuthRapidAPI(Clubhouse):
         self.command_responded_list = []
 
 
-class ChatClient(AuthRapidAPI):
+class ChatClient(AuthChatClient):
     def __init__(self):
         """
 
@@ -92,7 +92,7 @@ class ChatClient(AuthRapidAPI):
         return triggered
 
 
-class UrbanDict(AuthRapidAPI):
+class UrbanDict(AuthChatClient):
     URBAN_DICT_API_URL = Config.config_to_dict(Config.load_config(), "UrbanDictionary", "api_url")
 
     def __init__(self):
