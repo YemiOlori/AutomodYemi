@@ -4,8 +4,6 @@ from rich.table import Table
 from rich.console import Console
 from rich import box
 
-from . import logger
-
 from .main import AutoModClient
 
 
