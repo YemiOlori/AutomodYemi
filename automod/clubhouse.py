@@ -789,7 +789,7 @@ class Notifications(Auth):
     def __init__(self):
         super().__init__()
 
-    def get(self, page_size=20, page=1):
+    def get_notifications(self, page_size=20, page=1):
         """ (Clubhouse, int, int) -> dict
 
         Get my notifications.
@@ -799,7 +799,7 @@ class Notifications(Auth):
         logging.info(req)
         return req.json()
 
-    def get_actionable(self):
+    def get_notifications_actionable(self):
         """ (Clubhouse, int, int) -> dict
 
         Get notifications. This may return some notifications that require some actions
@@ -809,7 +809,7 @@ class Notifications(Auth):
         return req.json()
 
     @unstable_endpoint
-    def ignore_actionable(self, actionable_notification_id):
+    def ignore_notifications_actionable(self, actionable_notification_id):
         """ (Clubhouse, int) -> dict
 
         Ignore the actionable notification.
@@ -826,7 +826,7 @@ class Channel(Auth):
     def __init__(self):
         super().__init__()
 
-    def get(self, channel, channel_id=None):
+    def get_channel(self, channel, channel_id=None):
         """ (Clubhouse, str, int) -> dict
 
         Get information of the given channel
@@ -843,8 +843,8 @@ class Channel(Auth):
 
         return req_json
 
-    def join(self, channel, attribution_source="feed",
-             attribution_details="eyJpc19leHBsb3JlIjpmYWxzZSwicmFuayI6MX0="):
+    def join_channel(self, channel, attribution_source="feed",
+                     attribution_details="eyJpc19leHBsb3JlIjpmYWxzZSwicmFuayI6MX0="):
         """ (Clubhouse, str, str) -> dict
 
         Join the given channel
@@ -929,7 +929,7 @@ class Channel(Auth):
         logging.info(req)
         return req.json()
 
-    def leave(self, channel):
+    def leave_channel(self, channel):
         """ (Clubhouse, str) -> dict
 
         Leave the given channel
@@ -941,7 +941,7 @@ class Channel(Auth):
         logging.info(req)
         return req.json()
 
-    def create(self, topic="", user_ids=(), is_private=False, is_social_mode=False):
+    def create_channel(self, topic="", user_ids=(), is_private=False, is_social_mode=False):
         """ (Clubhouse, str, list, bool, bool) -> dict
 
         Create a new channel. Type of the room can be changed
@@ -1013,7 +1013,7 @@ class Channel(Auth):
         logging.info(req)
         return req.json()
 
-    def hide(self, channel, hide=True):
+    def hide_channel(self, channel, hide=True):
         """ (Clubhouse, str, bool) -> dict
 
         Hide/unhide the channel from the channel list.
@@ -1128,7 +1128,7 @@ class ChannelMod(Auth):
         """ (Clubhouse, str, int) -> dict
 
         Make the current channel open to public.
-        Everyone can join the channel.
+        Everyone can join_channel the channel.
         """
         data = {
             "channel": channel,
@@ -1142,7 +1142,7 @@ class ChannelMod(Auth):
         """ (Clubhouse, str, int) -> dict
 
         Make the current channel open to public.
-        Only people who user follows can join the channel.
+        Only people who user follows can join_channel the channel.
         """
         data = {
             "channel": channel,
@@ -1152,7 +1152,7 @@ class ChannelMod(Auth):
         logging.info(req)
         return req.json()
 
-    def end(self, channel, channel_id=None):
+    def end_channel(self, channel, channel_id=None):
         """ (Clubhouse, str, int) -> dict
 
         Kick everyone and close the channel. Requires moderator privilege.
@@ -1168,7 +1168,7 @@ class ChannelMod(Auth):
     def remove_user(self, channel, user_id):
         """ (Clubhouse, str, int) -> dict
 
-        Remove the user from the channel. The user will not be able to re-join.
+        Remove the user from the channel. The user will not be able to re-join_channel.
         """
         data = {
             "channel": channel,
@@ -1208,7 +1208,7 @@ class ChannelChat(Auth):
     def __init__(self):
         super().__init__()
 
-    def get(self, channel):
+    def get_chat(self, channel):
         """ (Clubhouse, str) -> dict
 
         Get events for the specific user.
@@ -1237,7 +1237,7 @@ class Message(Auth):
         super().__init__()
 
     # Does this work?
-    def get_feed(self):
+    def get_message_feed(self):
         """ (Clubhouse, str, str) -> dict
 
         Get events for the specific user.
@@ -1246,7 +1246,7 @@ class Message(Auth):
         logging.info(req)
         return req.json()
 
-    def create(self, participant_ids):
+    def create_message(self, participant_ids):
         """ (Clubhouse, list) -> dict
 
         Get events for the specific user.
@@ -1259,7 +1259,7 @@ class Message(Auth):
         logging.info(req)
         return req.json()
 
-    def search(self, participant_ids):
+    def search_messages(self, participant_ids):
         """ (Clubhouse, str, str) -> dict
 
         Get events for the specific user.
@@ -1336,7 +1336,7 @@ class Event(Auth):
     def __init__(self):
         super().__init__()
 
-    def get(self, event_id=None, user_ids=None, club_id=None, is_member_only=False, event_hashid=None,
+    def get_event(self, event_id=None, user_ids=None, club_id=None, is_member_only=False, event_hashid=None,
                   description=None, time_start_epoch=None, name=None):
         """ (Clubhouse, int, list, int, bool, int, str, int, str) -> dict
 
@@ -1356,7 +1356,7 @@ class Event(Auth):
         logging.info(req)
         return req.json()
 
-    def create(self, name, time_start_epoch, description, event_id=None, user_ids=(), club_id=None,
+    def create_event(self, name, time_start_epoch, description, event_id=None, user_ids=(), club_id=None,
                is_member_only=False, event_hashid=None):
         """ (Clubhouse, str, int, str, int, list, int, bool, int) -> dict
 
@@ -1376,7 +1376,7 @@ class Event(Auth):
         logging.info(req)
         return req.json()
 
-    def edit(self, name, time_start_epoch, description, event_id=None, user_ids=(), club_id=None,
+    def edit_event(self, name, time_start_epoch, description, event_id=None, user_ids=(), club_id=None,
              is_member_only=False, event_hashid=None):
         """ (Clubhouse, str, int, str, int, list, int, bool, int) -> dict
 
@@ -1396,7 +1396,7 @@ class Event(Auth):
         logging.info(req)
         return req.json()
 
-    def delete(self, event_id, user_ids=None, club_id=None, is_member_only=False, event_hashid=None,
+    def delete_event(self, event_id, user_ids=None, club_id=None, is_member_only=False, event_hashid=None,
                description=None, time_start_epoch=None, name=None):
         """ (Clubhouse, str, list, int, bool, int, str, int, str) -> dict
 
@@ -1456,7 +1456,7 @@ class Club(Auth):
     def __init__(self):
         super().__init__()
 
-    def get(self, club_id, source_topic_id=None):
+    def get_club(self, club_id, source_topic_id=None):
         """ (Clubhouse, int, int) -> dict
 
         Get the information about the given club_id.
@@ -1488,7 +1488,7 @@ class Club(Auth):
         logging.info(req)
         return req.json()
 
-    def join(self, club_id, source_topic_id=None):
+    def join_club(self, club_id, source_topic_id=None):
         """ (Clubhouse, int, int) -> dict
 
         Join a club
@@ -1501,7 +1501,7 @@ class Club(Auth):
         logging.info(req)
         return req.json()
 
-    def leave(self, club_id, source_topic_id=None):
+    def leave_club(self, club_id, source_topic_id=None):
         """ (Clubhouse, int, int) -> dict
 
         Leave a club
