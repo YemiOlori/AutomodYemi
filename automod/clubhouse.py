@@ -7,86 +7,102 @@
 clubhouse.py
 """
 
+import logging
+import requests
 import uuid
 import random
 import secrets
-import functools
-import requests
-import logging
+import threading
+from functools import wraps
 from configparser import ConfigParser
 
 
-def load_config(config_file=""):
-    """A function to read the config file."""
-    config_object = ConfigParser()
-    config_object.read(config_file)
-    return config_object
+def requires_authentication(func):
+    """ Simple decorator to check for the authentication """
+    @wraps(func)
+    def wrap(self, *args, **kwargs):
+        if not (self.HEADERS.get("CH-UserID") and
+                self.HEADERS.get("CH-DeviceId") and
+                self.HEADERS.get("Authorization")):
+            raise Exception('Not Authenticated')
+        return func(self, *args, **kwargs)
+    return wrap
 
 
-def section_key_exception(config_object, section):
-    if section not in config_object.sections():
-        raise Exception(f"Error in fetching config in read_config method. {section} not found in config file.")
-
-
-def config_to_dict(config_object, section, item=None):
-    section_key_exception(config_object, section)
-    config_section = dict(config_object[section])
-    if not item:
-        return config_section
-    config_item = config_section[item]
-    # Return None if section does not exist
-    return config_item
-
-
-def config_to_list(config_object, section):
-    section_key_exception(config_object, section)
-    config_section = config_object[section]
-    item_list = []
-    for item in config_section:
-        item_list.append(config_section[item])
-    config_section = item_list
-    # Return None if section does not exist
-    return config_section
-
-
-def reload_client():
-    """
-    A function to reload Clubhouse client from previous session.
-
-    :param client: A Clubhouse object
-    :return client: A Clubhouse object updated with configuration information
-    """
-    config_file = "/Users/deon/Documents/GitHub/HQ/setting.ini"
-    config_object = load_config(config_file)
-    user_config = config_to_dict(config_object, "Account")
-    client_id = user_config.get("client_id")
-    user_token = user_config.get("user_token")
-    user_device = user_config.get("user_device")
-    refresh_token = user_config.get("refresh_token")
-    access_token = user_config.get("access_token")
-    if not client_id or not user_token or not user_device:
-        logging.info("Reload client not successful")
-        return {}
-    reload_dict = {
-        "client_id": client_id,
-        "user_token": user_token,
-        "user_device": user_device,
-    }
-    logging.info("Reload client successful")
-    return reload_dict
-
-
-# Remove this decorator as endpoints are testes
 def unstable_endpoint(func):
     """ Simple decorator to warn that this endpoint is never tested at all. """
-    @functools.wraps(func)
+    @wraps(func)
     def wrap(self, *args, **kwargs):
         print("[!] This endpoint is NEVER TESTED and MAY BE UNSTABLE. BE CAREFUL!")
         return func(self, *args, **kwargs)
     return wrap
 
 
-class Helper:
+class Config:
+
+    @staticmethod
+    def load_config(config_file="/Users/deon/Documents/GitHub/HQ/config.ini"):
+        """A function to read the config file."""
+        config_object = ConfigParser()
+        config_object.read(config_file)
+        return config_object
+
+    @staticmethod
+    def section_key_exception(config_object, section):
+        if section not in config_object.sections():
+            raise Exception(f"Error in fetching config in read_config method. {section} not found in config file.")
+
+    @staticmethod
+    def config_to_dict(config_object, section, item=None):
+        Config.section_key_exception(config_object, section)
+        config_section = dict(config_object[section])
+        if not item:
+            return config_section
+        config_item = config_section[item]
+        # Return None if section does not exist
+        return config_item
+
+    @staticmethod
+    def config_to_list(config_object, section):
+        Config.section_key_exception(config_object, section)
+        config_section = config_object[section]
+        item_list = []
+        for item in config_section:
+            item_list.append(config_section[item])
+        config_section = item_list
+        # Return None if section does not exist
+        return config_section
+
+    @staticmethod
+    def reload_client():
+        """
+        A function to reload Clubhouse client from previous session.
+
+        :param client: A Clubhouse object
+        :return client: A Clubhouse object updated with configuration information
+        """
+        config_file = "/Users/deon/Documents/GitHub/HQ/setting.ini"
+        config_object = Config.load_config(config_file)
+        user_config = Config.config_to_dict(config_object, "Account")
+        client_id = user_config.get("client_id")
+        user_token = user_config.get("user_token")
+        user_device = user_config.get("user_device")
+        refresh_token = user_config.get("refresh_token")
+        access_token = user_config.get("access_token")
+        if not client_id or not user_token or not user_device:
+            logging.info("Reload client not successful")
+            return {}
+        reload_dict = {
+            "client_id": client_id,
+            "user_token": user_token,
+            "user_device": user_device,
+        }
+        logging.info("Reload client successful")
+        return reload_dict
+
+
+
+class Auth(Config):
     """
     Clubhouse Class
 
@@ -98,19 +114,8 @@ class Helper:
             - This means that the endpoint is never tested.
             - Likely to be endpoints that were taken from a static analysis
     """
-    reload_dict = reload_client()
 
-    @staticmethod
-    def require_authentication(func):
-        """ Simple decorator to check for the authentication """
-        @functools.wraps(func)
-        def wrap(self, *args, **kwargs):
-            if not (self.HEADERS.get("CH-UserID") and
-                    self.HEADERS.get("CH-DeviceId") and
-                    self.HEADERS.get("Authorization")):
-                raise Exception('Not Authenticated')
-            return func(self, *args, **kwargs)
-        return wrap
+    reload_dict = Config.reload_client()
 
     # App/API Information
     # Last Updated 3.12.2022
@@ -161,25 +166,22 @@ class Helper:
         """ (Clubhouse, str, str, str, dict) -> NoneType
         Set authenticated information
         """
-
-
-        self.client_id = client_id if client_id else "(null)"
-        # self.auth = Auth()
-        # self.client = Client()
-        # self.user = User()
-        # self.notifications = Notifications()
-        # self.channel = Channel()
-        # self.mod = Mod()
-        # self.chat = Chat()
-        # self.message = Message()
-        # self.event = Event()
-        # self.club = Club()
-        # self.topic = Topic()
+        super().__init__()
+        self.HEADERS = dict(self.HEADERS)
+        if isinstance(headers, dict):
+            self.HEADERS.update(headers)
+        if client_id and not self.HEADERS["CH-UserID"]:
+            self.HEADERS['CH-UserID'] = client_id
+        if user_token and not self.HEADERS["Authorization"]:
+            self.HEADERS["Authorization"] = f"Token {user_token}"
+        if not self.HEADERS["CH-DeviceId"]:
+            self.HEADERS["CH-DeviceId"] = user_device.upper() if user_device else str(uuid.uuid4()).upper()
+        self.client_id = self.HEADERS["CH-UserID"]
 
     def __str__(self):
         """ (Clubhouse) -> str
         Get information about the given class.
-        >>> clubhouse = Helper()
+        >>> clubhouse = Auth()
         >>> str(clubhouse)
         Clubhouse(user_id=(null), user_token=None, user_device=31525f52-6b67-40de-83c0-8f9fe0f6f409)
         """
@@ -189,38 +191,14 @@ class Helper:
             self.HEADERS.get('CH-DeviceId')
         )
 
-
-class Clubhouse(Helper):
-    def __init__(self):
-        """ (Clubhouse, str, str, str, dict) -> NoneType
-        Set authenticated information
-        """
-        super().__init__()
-        self.auth = Auth()
-        self.client = Client()
-        self.user = User()
-        self.notifications = Notifications()
-        self.channel = Channel()
-        self.mod = ChannelMod()
-        self.chat = ChannelChat()
-        self.message = Message()
-        self.event = Event()
-        self.club = Club()
-        self.topic = Topic()
-
-
-class Auth(Helper):
-    def __init__(self):
-        super().__init__()
-
     # Why doesn't this endpoint trigger a verification code?
-    def start(self, phone_number):
+    def start_auth(self, phone_number):
         """ (Clubhouse, str) -> dict
 
         Begin phone number authentication.
         Some examples for the phone number.
 
-        >>> clubhouse = Helper()
+        >>> clubhouse = Auth()
         >>> clubhouse.start_phone_number_auth("+821012341337")
         ...
         >>> clubhouse.start_phone_number_auth("+818013371221")
@@ -240,7 +218,7 @@ class Auth(Helper):
         return req.json()
 
     @unstable_endpoint
-    def resend(self, phone_number):
+    def resend_auth(self, phone_number):
         """ (Clubhouse, str) -> dict
 
         Resend the verification message
@@ -258,7 +236,7 @@ class Auth(Helper):
         logging.info(req)
         return req.json()
 
-    def complete(self, phone_number, rc_token, verification_code):
+    def complete_auth(self, phone_number, rc_token, verification_code):
         """ (Clubhouse, str, str, str) -> dict
 
         Complete phone number authentication.
@@ -289,10 +267,64 @@ class Auth(Helper):
         return req.json()
 
 
-class Client(Helper):
+class Clubhouse(Auth):
+
+    @staticmethod
+    def set_interval(interval):
+        """
+        A function to set the interval decorator.
+
+
+        :param interval: The interval duration
+        :param timeout:
+        :type interval: int
+        :return: decorator
+        :rtype: function
+        """
+
+        def decorator(func):
+            @wraps(func)  # Is this in the right place?
+            def wrap(*args, **kwargs):
+                is_stopped = threading.Event()
+
+                def loop():
+                    while not is_stopped.wait(interval):
+                        run = func(*args, **kwargs)
+                        if not run:
+                            logging.info(f"Stopped: {func}")
+                            break
+
+                thread = threading.Thread(target=loop)
+                thread.daemon = True
+                thread.start()
+                logging.info(f"Started: {func}")
+                return is_stopped
+
+            return wrap
+
+        return decorator
+
+    def __init__(self):
+        super().__init__()
+        # self.auth = Auth()
+        self.logging = logging
+        self.client = Client()
+        self.user = User()
+        self.notifications = Notifications()
+        self.channel = Channel()
+        self.mod = ChannelMod()
+        self.chat = ChannelChat()
+        self.message = Message()
+        self.event = Event()
+        self.club = Club()
+        self.topic = Topic()
+
+
+class Client(Auth):
     def __init__(self):
         super().__init__()
 
+    @requires_authentication
     def me(self, return_blocked_ids=False, timezone_identifier="Asia/Tokyo", return_following_ids=False):
         """ (Clubhouse, bool, str, bool) -> dict
 
@@ -620,7 +652,7 @@ class Client(Helper):
         return req.json()
 
 
-class User(Helper):
+class User(Auth):
     def __init__(self):
         super().__init__()
 
@@ -761,7 +793,7 @@ class User(Helper):
         return req.json()
 
 
-class Notifications(Helper):
+class Notifications(Auth):
     def __init__(self):
         super().__init__()
 
@@ -798,7 +830,7 @@ class Notifications(Helper):
         return req.json()
 
 
-class Channel(Helper):
+class Channel(Auth):
     def __init__(self):
         super().__init__()
 
@@ -1015,7 +1047,7 @@ class Channel(Helper):
         return req.json()
 
 
-class ChannelMod(Helper):
+class ChannelMod(Auth):
     def __init__(self):
         super().__init__()
 
@@ -1180,7 +1212,7 @@ class ChannelMod(Helper):
         return req.json()
 
 
-class ChannelChat(Helper):
+class ChannelChat(Auth):
     def __init__(self):
         super().__init__()
 
@@ -1208,7 +1240,7 @@ class ChannelChat(Helper):
         return req.json()
 
 
-class Message(Helper):
+class Message(Auth):
     def __init__(self):
         super().__init__()
 
@@ -1308,7 +1340,7 @@ class Message(Helper):
         return req.json()
 
 
-class Event(Helper):
+class Event(Auth):
     def __init__(self):
         super().__init__()
 
@@ -1428,7 +1460,7 @@ class Event(Helper):
         return req.json()
 
 
-class Club(Helper):
+class Club(Auth):
     def __init__(self):
         super().__init__()
 
@@ -1698,7 +1730,7 @@ class Club(Helper):
         return req.json()
 
 
-class Topic(Helper):
+class Topic(Auth):
     def __init__(self):
         super().__init__()
 
