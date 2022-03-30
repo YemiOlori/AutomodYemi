@@ -26,7 +26,7 @@ Client(Auth):
 	client.ping_user(self, channel, user_id)
 	client.following(self, client_id, page_size=50, page=1)
 	client.followers(self, client_id, page_size=50, page=1)
-	client.search(self, query, followers_only=False, following_only=False, cofollows_only=False)
+	client.search_messages(self, query, followers_only=False, following_only=False, cofollows_only=False)
 	client.get_clubs(self, is_startable_only=False)
 	client.get_online_friends(self)
 	client.get_settings(self)
@@ -63,7 +63,7 @@ Notifications(Auth):
 
 Channel(Auth):
     channel.get(self, channel, channel_id=None)
-    channel.join(self, channel, attribution_source="feed", attribution_details="eyJpc19leHBsb3JlIjpmYWxzZSwicmFuayI6MX0=")
+    channel.join_channel(self, channel, attribution_source="feed", attribution_details="eyJpc19leHBsb3JlIjpmYWxzZSwicmFuayI6MX0=")
     channel.audience_reply(self, channel, raise_hands=True, unraise_hands=False)
     channel.accept_speaker_invite(self, channel, client_id)
     channel.reject_speaker_invite(self, channel, client_id)
@@ -96,7 +96,7 @@ ChannelChat(Auth):
 
 Message(Auth):
     message.get_feed(self)
-	message.create(self, participant_ids)
+	message.create_message(self, participant_ids)
     message.search_(self, participant_ids)
 	message.get_message(self, chat_id)
     message.get_message_thread(self, participant_ids)
@@ -115,7 +115,7 @@ Event(Auth):
 Club(Auth):
     club.get(self, club_id, source_topic_id=None)
     club.get_members(self, club_id, return_followers=False, return_members=True, page_size=50, page=1)
-    club.join(self, club_id, source_topic_id=None)
+    club.join_channel(self, club_id, source_topic_id=None)
     club.leave(self, club_id, source_topic_id=None)
     club.add_club_admin(self, club_id, user_id)
     club.remove_club_admin(self, club_id, user_id)
