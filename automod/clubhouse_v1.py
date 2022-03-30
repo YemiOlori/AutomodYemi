@@ -994,7 +994,7 @@ class Clubhouse:
             "followers_only": followers_only,
             "query": query
         }
-        req = requests.post(f"{self.API_URL}/search", headers=self.HEADERS, json=data)
+        req = requests.post(f"{self.API_URL}/search_messages", headers=self.HEADERS, json=data)
         logging.info(req)
         return req.json()
 
