@@ -1,7 +1,7 @@
-from . import main as automod
-from . import moderation as mod
-from . import chat
-from . import audio
-from . import cli
 from . import logger
+# from .moderator import ModClient as Mod
+# from .chat import ChatClient as Chat
+# from .audio import AudioClient as Audio
+# from .main import AutoModClient
+from .cli import AutoMod
 # from .clubhouse import Clubhouse
