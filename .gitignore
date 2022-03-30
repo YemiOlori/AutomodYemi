@@ -192,3 +192,4 @@ automod/logger.py
 /automod/logger_2.py
 automod/clubhouse copy.py
 automod/clubhouse_copy.py
+.virtual_documents/test.feature
