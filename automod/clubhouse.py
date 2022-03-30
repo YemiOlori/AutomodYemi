@@ -101,7 +101,6 @@ class Config:
         return reload_dict
 
 
-
 class Auth(Config):
     """
     Clubhouse Class
@@ -170,13 +169,13 @@ class Auth(Config):
         self.HEADERS = dict(self.HEADERS)
         if isinstance(headers, dict):
             self.HEADERS.update(headers)
-        if client_id and not self.HEADERS["CH-UserID"]:
-            self.HEADERS['CH-UserID'] = client_id
-        if user_token and not self.HEADERS["Authorization"]:
+        if client_id and not self.HEADERS.get("CH-UserID"):
+            self.HEADERS["CH-UserID"] = client_id
+        if user_token and not self.HEADERS.get("Authorization"):
             self.HEADERS["Authorization"] = f"Token {user_token}"
-        if not self.HEADERS["CH-DeviceId"]:
+        if not self.HEADERS.get("CH-DeviceId"):
             self.HEADERS["CH-DeviceId"] = user_device.upper() if user_device else str(uuid.uuid4()).upper()
-        self.client_id = self.HEADERS["CH-UserID"]
+        self.client_id = int(self.HEADERS.get("CH-UserID")) if self.HEADERS.get("CH-UserID") else None
 
     def __str__(self):
         """ (Clubhouse) -> str
@@ -306,8 +305,7 @@ class Clubhouse(Auth):
 
     def __init__(self):
         super().__init__()
-        # self.auth = Auth()
-        self.logging = logging
+        self.auth = Auth()
         self.client = Client()
         self.user = User()
         self.notifications = Notifications()
@@ -324,7 +322,6 @@ class Client(Auth):
     def __init__(self):
         super().__init__()
 
-    @requires_authentication
     def me(self, return_blocked_ids=False, timezone_identifier="Asia/Tokyo", return_following_ids=False):
         """ (Clubhouse, bool, str, bool) -> dict
 
@@ -348,16 +345,20 @@ class Client(Auth):
         logging.info(req.json)
         return req.json()
 
-    def profile(self, client_id='', username=''):
+    def profile(self):
         """ (Clubhouse, str, str) -> dict
 
         Lookup someone else's profile. It is OK to one's own profile with this method.
         """
+        if not self.client_id:
+            logging.info("No Client ID on record")
+            # Also, get rid of this!
+            return {"success": False, "internal response": "No Client ID"}
         data = {
             "query_id": None,
             "query_result_position": 0,
-            "user_id": int(client_id) if client_id else None,
-            "username": username if username else None
+            "user_id": self.client_id,
+            "username": None
         }
         req = requests.post(f"{self.API_URL}/get_profile", headers=self.HEADERS, json=data)
         logging.info(req)
@@ -377,16 +378,12 @@ class Client(Auth):
         logging.info(req)
         return req.json()
 
-    def following(self, client_id, page_size=50, page=1):
+    def following(self, page_size=50, page=1):
         """ (Clubhouse, str, int, int) -> dict
 
         Get following users type2
         """
-        query = "user_id={}&page_size={}&page={}".format(
-            client_id,
-            page_size,
-            page
-        )
+        query = f"user_id={self.client_id}&page_size={page_size}&page={page}"
         req = requests.get(f"{self.API_URL}/get_following?{query}", headers=self.HEADERS)
         logging.info(req)
         return req.json()
@@ -405,7 +402,6 @@ class Client(Auth):
         logging.info(req)
         return req.json()
 
-    # Added by Deon
     def search(self, query, followers_only=False, following_only=False, cofollows_only=False):
         """ (Clubhouse, str, bool, bool, bool) -> dict
 
@@ -720,11 +716,7 @@ class User(Auth):
 
         Get following users type2
         """
-        query = "user_id={}&page_size={}&page={}".format(
-            user_id,
-            page_size,
-            page
-        )
+        query = f"user_id={user_id}&page_size={page_size}&page={page}"
         req = requests.get(f"{self.API_URL}/get_following?{query}", headers=self.HEADERS)
         logging.info(req)
         return req.json()
