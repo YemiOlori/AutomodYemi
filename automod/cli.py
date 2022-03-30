@@ -4,60 +4,64 @@ from rich.table import Table
 from rich.console import Console
 from rich import box
 
-from . import main as automod
+from .main import AutoModClient
 
 
-def get_hallway(client, max_limit=30):
+class AutoMod(AutoModClient):
+    def __init__(self):
+        super().__init__()
 
-    # Get channels and print
-    console = Console(width=180)
-    table = Table(show_header=True, header_style="bold magenta", box=box.MINIMAL_HEAVY_HEAD, leading=True)
-    table.add_column("speakers", width=8, justify='center')
-    table.add_column("users", width=8, justify='center')
-    table.add_column("type", width=8)
-    table.add_column("channel", width=10)
-    table.add_column("club", width=35, no_wrap=True)
-    table.add_column("title", style="cyan", width=70)
+    def get_hallway(self, max_limit=30):
 
-    feed = client.get_feed()
+        # Get channels and print
+        console = Console(width=180)
+        table = Table(show_header=True, header_style="bold magenta", box=box.MINIMAL_HEAVY_HEAD, leading=True)
+        table.add_column("speakers", width=8, justify='center')
+        table.add_column("users", width=8, justify='center')
+        table.add_column("type", width=8)
+        table.add_column("channel", width=10)
+        table.add_column("club", width=35, no_wrap=True)
+        table.add_column("title", style="cyan", width=70)
 
-    channel_list = []
-    for feed_item in feed['items']:
+        feed = self.client.feed()
 
-        key = feed_item.keys()
-        if 'channel' in key:
-            channel_list.append(feed_item)
+        channel_list = []
+        for feed_item in feed['items']:
 
-    i = 0
-    for channel in channel_list:
-        channel = channel['channel']
+            key = feed_item.keys()
+            if 'channel' in key:
+                channel_list.append(feed_item)
 
-        i += 1
-        if i > max_limit:
-            break
+        i = 0
+        for channel in channel_list:
+            channel = channel['channel']
 
-        channel_type = ''
-        club = ''
+            i += 1
+            if i > max_limit:
+                break
 
-        if channel['is_social_mode']:
-            channel_type = "social"
+            channel_type = ''
+            club = ''
 
-        if channel['is_private']:
-            channel_type = "private"
+            if channel['is_social_mode']:
+                channel_type = "social"
 
-        if channel['club']:
-            club = channel['club']['name']
+            if channel['is_private']:
+                channel_type = "private"
 
-        table.add_row(
-            str(int(channel['num_speakers'])),
-            str(int(channel['num_all'])),
-            str(channel_type),
-            str(channel['channel']),
-            str(club),
-            str(channel['topic']),
-        )
+            if channel['club']:
+                club = channel['club']['name']
 
-    console.print(table)
+            table.add_row(
+                str(int(channel['num_speakers'])),
+                str(int(channel['num_all'])),
+                str(channel_type),
+                str(channel['channel']),
+                str(club),
+                str(channel['topic']),
+            )
 
-    return
+        console.print(table)
+
+        return
 
