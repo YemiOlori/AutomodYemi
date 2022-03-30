@@ -217,7 +217,7 @@ class ModClient(Clubhouse):
 
             i = 0
             for user in user_info:
-                if str(user.get("user_id")) == self.client_id:
+                if user.get("user_id") == self.client_id:
                     client_info = user_info.pop(i)
                     response_dict["client_info"] = client_info
                     break
