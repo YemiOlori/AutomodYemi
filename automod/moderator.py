@@ -23,7 +23,7 @@ class ModClient(Clubhouse):
     set_interval = Clubhouse.set_interval
 
     def __init__(self):
-        super().__init__()
+        self.clubhouse_mod = super().__init__()
         self.s3_bucket = Config.config_to_dict(Config.load_config(), "S3", "bucket")
         self.automod_clubs = Config.config_to_list(Config.load_config(), "AutoModClubs")
         self.social_clubs = Config.config_to_list(Config.load_config(), "SocialClubs")
@@ -113,7 +113,7 @@ class ModClient(Clubhouse):
         if isinstance(message, str):
             message = [message]
         for item in message:
-            run = self.chat.send(channel, item)
+            run = self.chat.send_chat(channel, item)
             response = run.get("success")
             time.sleep(3)
         return response
@@ -163,7 +163,7 @@ class ModClient(Clubhouse):
         message_1 = "The share url for this room is:"
         message_2 = f"https://www.clubhouse.com/room/{channel}"
         message = [message_1, message_2]
-        send = self.chat.send(channel, message)
+        send = self.chat.send_chat(channel, message)
         if send.get("success"):
             response = self.set_announcement(channel, message, interval)
             return response
@@ -196,7 +196,7 @@ class ModClient(Clubhouse):
             logging.info(join_dict.get("club").get("club_id"))
             return _club
 
-        join_dict = self.channel.join(channel)
+        join_dict = self.channel.join_channel(channel)
 
         response_dict = {
             "join_dict": join_dict,
@@ -210,7 +210,7 @@ class ModClient(Clubhouse):
         """Retrieves information about the active channel"""
 
         response_dict = {}
-        channel_info = self.channel.get(channel)
+        channel_info = self.channel.get_channel(channel)
         if channel_info.get("success"):
             user_info = channel_info.pop("users")
             response_dict = {"channel_info": channel_info, "user_info": user_info}
@@ -227,13 +227,24 @@ class ModClient(Clubhouse):
 
     def accept_speaker_invitation(self, channel):
         accepted = self.channel.accept_speaker_invite(channel, self.client_id)
-        if accepted.get("success"):
-            return accepted
+        try:
+            accepted.get("success")
+        except AttributeError:
+            return False
+        else:
+            if accepted.get("success"):
+                return True
+        finally:
+            return False
+
 
     @set_interval(10)
-    def wait_speaker_permission(self, channel):
+    def wait_speaker_permission(self, channel, client_info):
+        speaker_status = client_info.get("is_speaker")
+        if speaker_status:
+            return False
         accept = self.accept_speaker_invitation(channel)
-        if not accept.get("success"):
+        if not accept:
             return True
 
     def reset_speaker(self, channel, interval=10, duration=120):
