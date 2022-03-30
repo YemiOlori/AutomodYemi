@@ -15,39 +15,40 @@ class AudioClient(Clubhouse):
 
     AGORA_KEY = Clubhouse.AGORA_KEY
 
+    try:
+        import agorartc
+        logging.info("Imported agorartc")
+        RTC = agorartc.createRtcEngineBridge()
+        eventHandler = agorartc.RtcEngineEventHandlerBase()
+        RTC.initEventHandler(eventHandler)
+        # 0xFFFFFFFE will exclude Chinese servers from Agora's servers.
+        RTC.initialize(AGORA_KEY, None, agorartc.AREA_CODE_GLOB & 0xFFFFFFFE)
+        audio_recording_device_manager, err = RTC.createAudioRecordingDeviceManager()
+        count = audio_recording_device_manager.getCount()
+        audio_recording_device_result = False
+        for i in range(count):
+            _audio_device = audio_recording_device_manager.getDevice(i, '', '')
+            if 'BlackHole 2ch' in _audio_device[1]:
+                audio_recording_device_manager.setDevice(_audio_device[2])
+                audio_recording_device_manager.setDeviceVolume(50)
+                audio_recording_device_result = True
+                logging.info("Audio recording device set to BlackHole 2ch")
+                break
+        if not audio_recording_device_result:
+            logging.warning("Audio recording device not set")
+        # Enhance voice quality
+        if RTC.setAudioProfile(
+                agorartc.AUDIO_PROFILE_MUSIC_HIGH_QUALITY_STEREO,
+                agorartc.AUDIO_SCENARIO_GAME_STREAMING
+        ) < 0:
+            logging.warning("Failed to set the high quality audio profile")
+    except ImportError:
+        RTC = None
+
     def __init__(self):
-        super().__init__()
+        self.clubhouse_audio = super().__init__()
         # Set some global variables
         # Figure this out when you're ready to start playing music
-        try:
-            import agorartc
-            logging.info("Imported agorartc")
-            self.RTC = agorartc.createRtcEngineBridge()
-            self.eventHandler = agorartc.RtcEngineEventHandlerBase()
-            self.RTC.initEventHandler(self.eventHandler)
-            # 0xFFFFFFFE will exclude Chinese servers from Agora's servers.
-            self.RTC.initialize(self.AGORA_KEY, None, agorartc.AREA_CODE_GLOB & 0xFFFFFFFE)
-            audio_recording_device_manager, err = self.RTC.createAudioRecordingDeviceManager()
-            count = audio_recording_device_manager.getCount()
-            audio_recording_device_result = False
-            for i in range(count):
-                _audio_device = audio_recording_device_manager.getDevice(i, '', '')
-                if 'BlackHole 2ch' in _audio_device[1]:
-                    audio_recording_device_manager.setDevice(_audio_device[2])
-                    audio_recording_device_manager.setDeviceVolume(50)
-                    audio_recording_device_result = True
-                    logging.info("Audio recording device set to BlackHole 2ch")
-                    break
-            if not audio_recording_device_result:
-                logging.warning("Audio recording device not set")
-            # Enhance voice quality
-            if self.RTC.setAudioProfile(
-                    agorartc.AUDIO_PROFILE_MUSIC_HIGH_QUALITY_STEREO,
-                    agorartc.AUDIO_SCENARIO_GAME_STREAMING
-                ) < 0:
-                logging.warning("Failed to set the high quality audio profile")
-        except ImportError:
-            self.RTC = None
 
     def mute_audio(self):
         self.RTC.muteLocalAudioStream(mute=True)
@@ -79,3 +80,4 @@ class AudioClient(Clubhouse):
 
 if __name__ == "__main__":
     pass
+
