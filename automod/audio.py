@@ -49,7 +49,6 @@ class AudioClient(Clubhouse):
         except ImportError:
             self.RTC = None
 
-
     def mute_audio(self):
         self.RTC.muteLocalAudioStream(mute=True)
         return
