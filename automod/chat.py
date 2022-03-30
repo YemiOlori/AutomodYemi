@@ -1,38 +1,46 @@
-from configparser import ConfigParser
 import requests
 import logging
 import time
 from datetime import datetime
 
-import fancy_text
 import pytz
 
-from .moderation import ModClient
-from .moderation import load_config
-from .moderation import config_to_dict
+from .clubhouse import Config
+from .clubhouse import Clubhouse
 
 
-class ChatClient(ModClient):
+class AuthRapidAPI(Clubhouse):
+    RAPID_API_HEADERS = {
+        "X-RapidAPI-Host": Config.config_to_dict(Config.load_config(), "RapidAPI", "host"),
+        "X-RapidAPI-Key": Config.config_to_dict(Config.load_config(), "RapidAPI", "key")
+    }
+
+    def __init__(self):
+        super().__init__()
+        self.command_responded_list = []
+
+
+class ChatClient(AuthRapidAPI):
     def __init__(self):
         """
 
         """
         super().__init__()
-        self.client_id = self.HEADERS.get('CH-UserID')
+        self.UrbanDict = UrbanDict()
+        self.URBAN_DICT_API_URL = UrbanDict.URBAN_DICT_API_URL
 
-        config_file = "/Users/deon/Documents/GitHub/HQ/config.ini"
-        self.config_object = load_config(config_file)
-        self.RAPID_API_HEADERS = {
-            "X-RapidAPI-Host": config_to_dict(self.config_object, "RapidAPI", "host"),
-            "X-RapidAPI-Key": config_to_dict(self.config_object, "RapidAPI", "key")
-        }
-        self.command_responded_list = []
+    def __str__(self):
+        """
+        :arg
+        """
+        return f"ChatClient(host={self.HEADERS.get('X-RapidAPI-Host')}, key={self.HEADERS.get('X-RapidAPI-Key')})"
 
-    def get_channel_stream(self, channel):
-        channel_message_stream = self.get_channel_messages(channel)
+    def get_chat_stream(self, channel, chat_stream=None):
+        if channel and not chat_stream:
+            message_stream = self.message.get(channel)
 
         command_triggered_list = []
-        for messages in channel_message_stream.get("messages"):
+        for messages in chat_stream.get("messages"):
             message = messages.get("message")
             message_id = messages.get("message_id")
             time_diff = None
@@ -53,8 +61,9 @@ class ChatClient(ModClient):
 
         return command_triggered_list
 
-    def check_command(self, channel):
-        command_triggered_list = self.get_channel_stream(channel)
+    @staticmethod
+    def check_command(triggers=None):
+        command_triggered_list = triggers
 
         ud_prefixes = ["/urban", "/ud"]
         mw_prefixes = ["/def", "/dict"]
@@ -83,17 +92,17 @@ class ChatClient(ModClient):
         return triggered
 
 
-class UrbanDict(ChatClient):
+class UrbanDict(AuthRapidAPI):
+    URBAN_DICT_API_URL = Config.config_to_dict(Config.load_config(), "UrbanDictionary", "api_url")
+
     def __init__(self):
         """
 
         """
         super().__init__()
-        self.URBAN_DICT_API_URL = config_to_dict(self.config_object, "UrbanDictionary", "api_url")
         self.ud_thread = None
         self.ud_defined_list = []
-
-    # urban_dict_active = {}
+        self.ud_message_responded_list = []
 
     def __str__(self):
         """
@@ -111,7 +120,10 @@ class UrbanDict(ChatClient):
         }
         req = requests.get(self.URBAN_DICT_API_URL, headers=self.RAPID_API_HEADERS, params=querystring)
         logging.info(f"{req}")
-        definitions = req.json()['list'][0]['definition'].split('\r\n')
+        if len(req.json().get("list")) > 0:
+            definitions = req.json().get("list")[0]["definition"].splitlines()
+        else:
+            return False
 
         # if len(definitions) == 1:
         #     definitions = definitions[0].split(' , ')
@@ -129,13 +141,14 @@ class UrbanDict(ChatClient):
 
         definition_list = []
         for definition in definitions:
-            definition = definition.replace("[", "")
-            definition = definition.replace("]", "")
-            definition_list.append(definition)
-
-        logging.info(f"{definition_list}")
-
-        return definition_list
+            if len(definition) > 0:
+                definition = definition.replace("[", "")
+                definition = definition.replace("]", "")
+                definition = definition.replace(" ,", ", ")
+                definition_list.append(definition)
+        definition = " ".join(definition_list)
+        logging.info(f"{definition}")
+        return definition
 
     def urban_dict_trigger(self, message_list):
         urban_dict_requests = []
@@ -173,29 +186,18 @@ class UrbanDict(ChatClient):
 
         for request in urban_dict_requests:
             term = request.get("term")
-            definition= self.get_definition(term)
+            definition = self.get_definition(term)
 
             user_id = request.get("user_id")
-            user_profile = self.get_profile(user_id).get("user_profile")
+            user_profile = self.user.get_profile(user_id).get("user_profile")
             user_name = (
                 user_profile.get("display_name") if user_profile.get("display_name")
                 else user_profile.get("name")
             )
 
             reply_message = f"@{user_name}: 𝗨𝗿𝗯𝗮𝗻 𝗗𝗶𝗰𝘁𝗶𝗼𝗻𝗮𝘆 [{term}]: {definition}"
-            self.send_channel_message(channel, reply_message)
-            self.command_responded_list.append(request.get("message_id"))
+            self.channel.send(channel, reply_message)
+            self.ud_message_responded_list.append(request.get("message_id"))
             self.ud_defined_list.append(term)
 
         return True
-
-
-
-def chat_client(channel):
-    _chat_client = ChatClient()
-    ud_client = UrbanDict()
-
-    message_list = _chat_client.check_command(channel)
-
-    if message_list.get("urban_dict"):
-        ud_client.urban_dict(channel, message_list.get("urban_dict"))
