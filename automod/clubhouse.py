@@ -38,6 +38,24 @@ def unstable_endpoint(func):
     return wrap
 
 
+def validate_response(func):
+    @wraps(func)  # Is this in the right place?
+    def wrap(*args, **kwargs):
+        req = func(*args, **kwargs)
+        if req.status_code == 200:
+            response = req.json()
+        elif req.status_code:
+            response = {"success": False}
+        else:
+            response = {"success": False}
+
+        logging.info(f"{func.__name__} {req}")
+
+        return response
+
+    return wrap
+
+
 class Config:
 
     @staticmethod
@@ -191,6 +209,7 @@ class Auth(Config):
         )
 
     # Why doesn't this endpoint trigger a verification code?
+    @validate_response
     def start_auth(self, phone_number):
         """ (Clubhouse, str) -> dict
 
@@ -213,9 +232,9 @@ class Auth(Config):
             "phone_number": phone_number
         }
         req = requests.post(f"{self.API_URL}/start_phone_number_auth", headers=self.HEADERS, json=data)
-        logging.info(req)
-        return req.json()
+        return req
 
+    @validate_response
     @unstable_endpoint
     def resend_auth(self, phone_number):
         """ (Clubhouse, str) -> dict
@@ -232,9 +251,9 @@ class Auth(Config):
             "phone_number": phone_number
         }
         req = requests.post(f"{self.API_URL}/resend_phone_number_auth", headers=self.HEADERS, json=data)
-        logging.info(req)
-        return req.json()
+        return req
 
+    @validate_response
     def complete_auth(self, phone_number, rc_token, verification_code):
         """ (Clubhouse, str, str, str) -> dict
 
@@ -252,9 +271,9 @@ class Auth(Config):
             "verification_code": verification_code
         }
         req = requests.post(f"{self.API_URL}/complete_phone_number_auth", headers=self.HEADERS, json=data)
-        logging.info(req)
-        return req.json()
+        return req
 
+    @validate_response
     def logout(self):
         """ (Clubhouse) -> dict
 
@@ -262,8 +281,7 @@ class Auth(Config):
         """
         data = {}
         req = requests.post(f"{self.API_URL}/logout", headers=self.HEADERS, json=data)
-        logging.info(req)
-        return req.json()
+        return req
 
 
 class Clubhouse(Auth):
@@ -322,6 +340,7 @@ class Client(Auth):
     def __init__(self):
         super().__init__()
 
+    @validate_response
     def me(self, return_blocked_ids=False, timezone_identifier="Asia/Tokyo", return_following_ids=False):
         """ (Clubhouse, bool, str, bool) -> dict
 
@@ -333,18 +352,18 @@ class Client(Auth):
             "return_following_ids": return_following_ids
         }
         req = requests.post(f"{self.API_URL}/me", headers=self.HEADERS, json=data)
-        logging.info(req)
-        return req.json()
+        return req
 
+    @validate_response
     def feed(self):
         """ (Clubhouse) -> dict
 
         Get list of channels, current invite status, etc.
         """
         req = requests.get(f"{self.API_URL}/get_feed?", headers=self.HEADERS)
-        logging.info(req.json)
-        return req.json()
+        return req
 
+    @validate_response
     def profile(self):
         """ (Clubhouse, str, str) -> dict
 
@@ -361,9 +380,9 @@ class Client(Auth):
             "username": None
         }
         req = requests.post(f"{self.API_URL}/get_profile", headers=self.HEADERS, json=data)
-        logging.info(req)
-        return req.json()
+        return req
 
+    @validate_response
     def ping_user(self, channel, user_id):
         """ (Clubhouse, str, int) -> dict
 
@@ -375,9 +394,9 @@ class Client(Auth):
             "user_id": int(user_id)
         }
         req = requests.post(f"{self.API_URL}/invite_to_existing_channel", headers=self.HEADERS, json=data)
-        logging.info(req)
-        return req.json()
+        return req
 
+    @validate_response
     def following(self, page_size=50, page=1):
         """ (Clubhouse, str, int, int) -> dict
 
@@ -385,9 +404,9 @@ class Client(Auth):
         """
         query = f"user_id={self.client_id}&page_size={page_size}&page={page}"
         req = requests.get(f"{self.API_URL}/get_following?{query}", headers=self.HEADERS)
-        logging.info(req)
-        return req.json()
+        return req
 
+    @validate_response
     def followers(self, client_id, page_size=50, page=1):
         """ (Clubhouse, str, int, int) -> dict
 
@@ -399,9 +418,9 @@ class Client(Auth):
             page
         )
         req = requests.get(f"{self.API_URL}/get_followers?{query}", headers=self.HEADERS)
-        logging.info(req)
-        return req.json()
+        return req
 
+    @validate_response
     def search(self, query, followers_only=False, following_only=False, cofollows_only=False):
         """ (Clubhouse, str, bool, bool, bool) -> dict
 
@@ -415,9 +434,9 @@ class Client(Auth):
             "query": query
         }
         req = requests.post(f"{self.API_URL}/search", headers=self.HEADERS, json=data)
-        logging.info(req)
-        return req.json()
+        return req
 
+    @validate_response
     def get_clubs(self, is_startable_only=False):
         """ (Clubhouse, bool) -> dict
 
@@ -427,27 +446,27 @@ class Client(Auth):
             "is_startable_only": is_startable_only
         }
         req = requests.post(f"{self.API_URL}/get_clubs", headers=self.HEADERS, json=data)
-        logging.info(req)
-        return req.json()
+        return req
 
+    @validate_response
     def get_online_friends(self):
         """ (Clubhouse) -> dict
 
         List all online friends.
         """
         req = requests.post(f"{self.API_URL}/get_online_friends", headers=self.HEADERS, json={})
-        logging.info(req)
-        return req.json()
+        return req
 
+    @validate_response
     def get_settings(self):
         """ (Clubhouse) -> dict
 
         Receive user's settings.
         """
         req = requests.get(f"{self.API_URL}/get_settings", headers=self.HEADERS)
-        logging.info(req)
-        return req.json()
+        return req
 
+    @validate_response
     def add_email(self, email):
         """ (Clubhouse, str) -> dict
 
@@ -458,9 +477,9 @@ class Client(Auth):
             "email": email
         }
         req = requests.post(f"{self.API_URL}/add_email", headers=self.HEADERS, json=data)
-        logging.info(req)
-        return req.json()
+        return req
 
+    @validate_response
     def add_topic(self, club_id=None, topic_id=None):
         """ (Clubhouse, int, int) -> dict
 
@@ -474,9 +493,9 @@ class Client(Auth):
             "topic_id": int(topic_id) if topic_id else None
         }
         req = requests.post(f"{self.API_URL}/add_user_topic", headers=self.HEADERS, json=data)
-        logging.info(req)
-        return req.json()
+        return req
 
+    @validate_response
     def remove_topic(self, club_id, topic_id):
         """ (Clubhouse, int, int) -> dict
 
@@ -487,9 +506,9 @@ class Client(Auth):
             "topic_id": int(topic_id) if topic_id else None
         }
         req = requests.post(f"{self.API_URL}/remove_user_topic", headers=self.HEADERS, json=data)
-        logging.info(req)
-        return req.json()
+        return req
 
+    @validate_response
     def update_photo(self, photo_filename):
         """ (Clubhouse, str) -> dict
 
@@ -502,9 +521,9 @@ class Client(Auth):
         self.HEADERS.pop("Content-Type")
         req = requests.post(f"{self.API_URL}/update_photo", headers=self.HEADERS, files=files)
         self.HEADERS['Content-Type'] = tmp
-        logging.info(req)
-        return req.json()
+        return req
 
+    @validate_response
     def update_bio(self, bio):
         """ (Clubhouse, str) -> dict
 
@@ -514,9 +533,9 @@ class Client(Auth):
             "bio": bio
         }
         req = requests.post(f"{self.API_URL}/update_bio", headers=self.HEADERS, json=data)
-        logging.info(req)
-        return req.json()
+        return req
 
+    @validate_response
     def update_name(self, name):
         """ (Clubhouse, str) -> dict
 
@@ -528,9 +547,9 @@ class Client(Auth):
             "name": name,
         }
         req = requests.post(f"{self.API_URL}/update_name", headers=self.HEADERS, json=data)
-        logging.info(req)
-        return req.json()
+        return req
 
+    @validate_response
     def update_username(self, username):
         """ (Clubhouse, str) -> dict
 
@@ -540,10 +559,10 @@ class Client(Auth):
             "username": username,
         }
         req = requests.post(f"{self.API_URL}/update_username", headers=self.HEADERS, json=data)
-        logging.info(req)
-        return req.json()
+        return req
 
     # This is same as username and needs to be fixed
+    @validate_response
     def update_displayname(self, name):
         """ (Clubhouse, str) -> dict
 
@@ -553,9 +572,9 @@ class Client(Auth):
             "name": name,
         }
         req = requests.post(f"{self.API_URL}/update_name", headers=self.HEADERS, json=data)
-        logging.info(req)
-        return req.json()
+        return req
 
+    @validate_response
     def update_twitter_username(self, username, twitter_token, twitter_secret):
         """ (Clubhouse, str, str, str) -> dict
 
@@ -570,9 +589,9 @@ class Client(Auth):
             "twitter_secret": twitter_secret
         }
         req = requests.post(f"{self.API_URL}/update_twitter_username", headers=self.HEADERS, json=data)
-        logging.info(req)
-        return req.json()
+        return req
 
+    @validate_response
     def update_instagram_username(self, code):
         """ (Clubhouse, str) -> dict
 
@@ -585,9 +604,9 @@ class Client(Auth):
             "code": code
         }
         req = requests.post(f"{self.API_URL}/update_instagram_username", headers=self.HEADERS, json=data)
-        logging.info(req)
-        return req.json()
+        return req
 
+    @validate_response
     def update_skintone(self, skintone=1):
         """ (Clubhouse, int) -> dict
         Updating skinetone for raising hands, etc.
@@ -600,9 +619,9 @@ class Client(Auth):
             "skintone": skintone
         }
         req = requests.post(f"{self.API_URL}/update_skintone", headers=self.HEADERS, json=data)
-        logging.info(req)
-        return req.json()
+        return req
 
+    @validate_response
     def update_follow_notifications(self, client_id, notification_type=2):
         """ (Clubhouse, str, int) -> dict
 
@@ -614,9 +633,9 @@ class Client(Auth):
             "notification_type": int(notification_type)
         }
         req = requests.post(f"{self.API_URL}/update_follow_notifications", headers=self.HEADERS, json=data)
-        logging.info(req)
-        return req.json()
+        return req
 
+    @validate_response
     def refresh_token(self, refresh_token):
         """ (Clubhouse, str) -> dict
 
@@ -626,9 +645,9 @@ class Client(Auth):
             "refresh": refresh_token
         }
         req = requests.post(f"{self.API_URL}/refresh_token", headers=self.HEADERS, json=data)
-        logging.info(req)
-        return req.json()
+        return req
 
+    @validate_response
     @unstable_endpoint
     def report_incident(self, client_id, channel, incident_type, incident_description, email):
         """ (Clubhouse, int, str, unknown, str, str) -> dict
@@ -644,14 +663,14 @@ class Client(Auth):
             "email": email
         }
         req = requests.post(f"{self.API_URL}/report_incident", headers=self.HEADERS, json=data)
-        logging.info(req)
-        return req.json()
+        return req
 
 
 class User(Auth):
     def __init__(self):
         super().__init__()
 
+    @validate_response
     def get_profile(self, user_id='', username=''):
         """ (Clubhouse, str, str) -> dict
 
@@ -664,9 +683,9 @@ class User(Auth):
             "username": username if username else None
         }
         req = requests.post(f"{self.API_URL}/get_profile", headers=self.HEADERS, json=data)
-        logging.info(req)
-        return req.json()
+        return req
 
+    @validate_response
     def follow(self, user_id, user_ids=None, source=4, source_topic_id=None):
         """ (Clubhouse, int, list, int, int) -> dict
 
@@ -680,9 +699,9 @@ class User(Auth):
             "source": source
         }
         req = requests.post(f"{self.API_URL}/follow", headers=self.HEADERS, json=data)
-        logging.info(req)
-        return req.json()
+        return req
 
+    @validate_response
     def unfollow(self, user_id):
         """ (Clubhouse, int) -> dict
 
@@ -692,9 +711,9 @@ class User(Auth):
             "user_id": int(user_id)
         }
         req = requests.post(f"{self.API_URL}/unfollow", headers=self.HEADERS, json=data)
-        logging.info(req)
-        return req.json()
+        return req
 
+    @validate_response
     def follow_multiple(self, user_ids, user_id=None, source=7, source_topic_id=None):
         """ (Clubhouse, list, int, int, int) -> dict
 
@@ -708,9 +727,9 @@ class User(Auth):
             "source": source
         }
         req = requests.post(f"{self.API_URL}/follow_multiple", headers=self.HEADERS, json=data)
-        logging.info(req)
-        return req.json()
+        return req
 
+    @validate_response
     def following(self, user_id, page_size=50, page=1):
         """ (Clubhouse, str, int, int) -> dict
 
@@ -718,9 +737,9 @@ class User(Auth):
         """
         query = f"user_id={user_id}&page_size={page_size}&page={page}"
         req = requests.get(f"{self.API_URL}/get_following?{query}", headers=self.HEADERS)
-        logging.info(req)
-        return req.json()
+        return req
 
+    @validate_response
     def followers(self, user_id, page_size=50, page=1):
         """ (Clubhouse, str, int, int) -> dict
 
@@ -732,9 +751,9 @@ class User(Auth):
             page
         )
         req = requests.get(f"{self.API_URL}/get_followers?{query}", headers=self.HEADERS)
-        logging.info(req)
-        return req.json()
+        return req
 
+    @validate_response
     def mutual_follows(self, user_id, page_size=50, page=1):
         """ (Clubhouse, str, int, int) -> dict
 
@@ -746,9 +765,9 @@ class User(Auth):
             page
         )
         req = requests.get(f"{self.API_URL}/get_mutual_follows?{query}", headers=self.HEADERS)
-        logging.info(req)
-        return req.json()
+        return req
 
+    @validate_response
     def block(self, user_id):
         """ (Clubhouse, int) -> dict
 
@@ -758,9 +777,9 @@ class User(Auth):
             "user_id": int(user_id)
         }
         req = requests.post(f"{self.API_URL}/block", headers=self.HEADERS, json=data)
-        logging.info(req)
-        return req.json()
+        return req
 
+    @validate_response
     def unblock(self, user_id):
         """ (Clubhouse, int) -> dict
 
@@ -770,10 +789,10 @@ class User(Auth):
             "user_id": int(user_id)
         }
         req = requests.post(f"{self.API_URL}/unblock", headers=self.HEADERS, json=data)
-        logging.info(req)
-        return req.json()
+        return req
 
     # What is this?
+    @validate_response
     def get_events_for_user(self, user_id='', page_size=25, page=1):
         """ (Clubhouse, str, int, int) -> dict
 
@@ -781,14 +800,14 @@ class User(Auth):
         """
         query = f"user_id={user_id}&page_size={page_size}&page={page}"
         req = requests.get(f"{self.API_URL}/get_events_for_user?{query}", headers=self.HEADERS)
-        logging.info(req)
-        return req.json()
+        return req
 
 
 class Notifications(Auth):
     def __init__(self):
         super().__init__()
 
+    @validate_response
     def get_notifications(self, page_size=20, page=1):
         """ (Clubhouse, int, int) -> dict
 
@@ -796,18 +815,18 @@ class Notifications(Auth):
         """
         query = f"page_size={page_size}&page={page}"
         req = requests.get(f"{self.API_URL}/get_notifications?{query}", headers=self.HEADERS)
-        logging.info(req)
-        return req.json()
+        return req
 
+    @validate_response
     def get_notifications_actionable(self):
         """ (Clubhouse, int, int) -> dict
 
         Get notifications. This may return some notifications that require some actions
         """
         req = requests.get(f"{self.API_URL}/get_actionable_notifications", headers=self.HEADERS)
-        logging.info(req)
-        return req.json()
+        return req
 
+    @validate_response
     @unstable_endpoint
     def ignore_notifications_actionable(self, actionable_notification_id):
         """ (Clubhouse, int) -> dict
@@ -818,14 +837,14 @@ class Notifications(Auth):
             "actionable_notification_id": actionable_notification_id
         }
         req = requests.post(f"{self.API_URL}/ignore_actionable_notification", headers=self.HEADERS, json=data)
-        logging.info(req)
-        return req.json()
+        return req
 
 
 class Channel(Auth):
     def __init__(self):
         super().__init__()
 
+    @validate_response
     def get_channel(self, channel, channel_id=None):
         """ (Clubhouse, str, int) -> dict
 
@@ -836,13 +855,9 @@ class Channel(Auth):
             "channel_id": channel_id
         }
         req = requests.post(f"{self.API_URL}/get_channel", headers=self.HEADERS, json=data)
-        req_json = req.json()
-        logging.info(req_json)
-        if req_json.get("should_leave"):
-            raise Exception
+        return req
 
-        return req_json
-
+    @validate_response
     def join_channel(self, channel, attribution_source="feed",
                      attribution_details="eyJpc19leHBsb3JlIjpmYWxzZSwicmFuayI6MX0="):
         """ (Clubhouse, str, str) -> dict
@@ -856,10 +871,9 @@ class Channel(Auth):
             # logging_context (json of some details)
         }
         req = requests.post(f"{self.API_URL}/join_channel", headers=self.HEADERS, json=data)
-        logging.info(data)
-        logging.info(req.json())
-        return req.json()
+        return req
 
+    @validate_response
     def audience_reply(self, channel, raise_hands=True, unraise_hands=False):
         """ (Clubhouse, str, bool, bool) -> bool
 
@@ -871,9 +885,9 @@ class Channel(Auth):
             "unraise_hands": unraise_hands
         }
         req = requests.post(f"{self.API_URL}/audience_reply", headers=self.HEADERS, json=data)
-        logging.info(req)
-        return req.json()
+        return req
 
+    @validate_response
     def accept_speaker_invite(self, channel, client_id):
         """ (Clubhouse, str, int) -> dict
 
@@ -885,9 +899,9 @@ class Channel(Auth):
             "user_id": int(client_id)
         }
         req = requests.post(f"{self.API_URL}/accept_speaker_invite", headers=self.HEADERS, json=data)
-        logging.info(req)
-        return req.json()
+        return req
 
+    @validate_response
     def reject_speaker_invite(self, channel, client_id):
         """ (Clubhouse, str, int) -> dict
 
@@ -898,9 +912,9 @@ class Channel(Auth):
             "user_id": int(client_id)
         }
         req = requests.post(f"{self.API_URL}/reject_speaker_invite", headers=self.HEADERS, json=data)
-        logging.info(req)
-        return req.json()
+        return req
 
+    @validate_response
     def update_audio_mode(self, channel):
         """ (Clubhouse, str) -> dict
         audio_profile for music mode is 11
@@ -913,9 +927,9 @@ class Channel(Auth):
             "is_on_call": False
         }
         req = requests.post(f"{self.API_URL}/update_channel_user_status", headers=self.HEADERS, json=data)
-        logging.info(req)
-        return req.json()
+        return req
 
+    @validate_response
     def active_ping(self, channel):
         """ (Clubhouse, str) -> dict
 
@@ -926,9 +940,9 @@ class Channel(Auth):
             "chanel_id": None
         }
         req = requests.post(f"{self.API_URL}/active_ping", headers=self.HEADERS, json=data)
-        logging.info(req)
-        return req.json()
+        return req
 
+    @validate_response
     def leave_channel(self, channel):
         """ (Clubhouse, str) -> dict
 
@@ -938,9 +952,9 @@ class Channel(Auth):
             "channel": channel
         }
         req = requests.post(f"{self.API_URL}/leave_channel", headers=self.HEADERS, json=data)
-        logging.info(req)
-        return req.json()
+        return req
 
+    @validate_response
     def create_channel(self, topic="", user_ids=(), is_private=False, is_social_mode=False):
         """ (Clubhouse, str, list, bool, bool) -> dict
 
@@ -955,10 +969,10 @@ class Channel(Auth):
             "topic": topic
         }
         req = requests.post(f"{self.API_URL}/create_channel", headers=self.HEADERS, json=data)
-        logging.info(req)
-        return req.json()
+        return req
 
     # Is this a private room or a wave?
+    @validate_response
     @unstable_endpoint
     def invite_to_new_channel(self, user_id, channel):
         """ (Clubhouse, int, str) -> dict
@@ -970,10 +984,10 @@ class Channel(Auth):
             "channel": channel
         }
         req = requests.post(f"{self.API_URL}/invite_to_new_channel", headers=self.HEADERS, json=data)
-        logging.info(req)
-        return req.json()
+        return req
 
     # Is this a private room or a wave?
+    @validate_response
     @unstable_endpoint
     def accept_new_channel_invite(self, channel_invite_id):
         """ (Clubhouse, int) -> dict
@@ -984,9 +998,9 @@ class Channel(Auth):
             "channel_invite_id": channel_invite_id
         }
         req = requests.post(f"{self.API_URL}/accept_new_channel_invite", headers=self.HEADERS, json=data)
-        logging.info(req)
-        return req.json()
+        return req
 
+    @validate_response
     @unstable_endpoint
     def reject_new_channel_invite(self, channel_invite_id):
         """ (Clubhouse, int) -> dict
@@ -997,9 +1011,9 @@ class Channel(Auth):
             "channel_invite_id": channel_invite_id
         }
         req = requests.post(f"{self.API_URL}/reject_new_channel_invite", headers=self.HEADERS, json=data)
-        logging.info(req)
-        return req.json()
+        return req
 
+    @validate_response
     @unstable_endpoint
     def cancel_new_channel_invite(self, channel_invite_id):
         """ (Clubhouse, int) -> dict
@@ -1010,9 +1024,9 @@ class Channel(Auth):
             "channel_invite_id": channel_invite_id
         }
         req = requests.post(f"{self.API_URL}/cancel_new_channel_invite", headers=self.HEADERS, json=data)
-        logging.info(req)
-        return req.json()
+        return req
 
+    @validate_response
     def hide_channel(self, channel, hide=True):
         """ (Clubhouse, str, bool) -> dict
 
@@ -1024,10 +1038,10 @@ class Channel(Auth):
             "hide": hide
         }
         req = requests.post(f"{self.API_URL}/hide_channel", headers=self.HEADERS, json=data)
-        logging.info(req)
-        return req.json()
+        return req
 
     # What is this?
+    @validate_response
     def get_create_channel_targets(self):
         """ (Clubhouse) -> dict
 
@@ -1035,14 +1049,14 @@ class Channel(Auth):
         """
         data = {}
         req = requests.post(f"{self.API_URL}/get_create_channel_targets", headers=self.HEADERS, json=data)
-        logging.info(req)
-        return req.json()
+        return req
 
 
 class ChannelMod(Auth):
     def __init__(self):
         super().__init__()
 
+    @validate_response
     def make_moderator(self, channel, user_id):
         """ (Clubhouse, str, int) -> dict
 
@@ -1053,9 +1067,9 @@ class ChannelMod(Auth):
             "user_id": int(user_id)
         }
         req = requests.post(f"{self.API_URL}/make_moderator", headers=self.HEADERS, json=data)
-        logging.info(req)
-        return req.json()
+        return req
 
+    @validate_response
     def uninvite_speaker(self, channel, user_id):
         """ (Clubhouse, str, int) -> dict
 
@@ -1066,9 +1080,9 @@ class ChannelMod(Auth):
             "user_id": int(user_id)
         }
         req = requests.post(f"{self.API_URL}/invite_speaker", headers=self.HEADERS, json=data)
-        logging.info(req)
-        return req.json()
+        return req
 
+    @validate_response
     def move_speaker(self, channel, user_id):
         """ (Clubhouse, str, int) -> dict
 
@@ -1079,9 +1093,9 @@ class ChannelMod(Auth):
             "user_id": int(user_id)
         }
         req = requests.post(f"{self.API_URL}/uninvite_speaker", headers=self.HEADERS, json=data)
-        logging.info(req)
-        return req.json()
+        return req
 
+    @validate_response
     def mute_speaker(self, channel, user_id):
         """ (Clubhouse, str, int) -> dict
 
@@ -1092,9 +1106,9 @@ class ChannelMod(Auth):
             "user_id": int(user_id)
         }
         req = requests.post(f"{self.API_URL}/mute_speaker", headers=self.HEADERS, json=data)
-        logging.info(req)
-        return req.json()
+        return req
 
+    @validate_response
     def add_link(self, channel, link):
         """ (Clubhouse, str, str) -> dict
 
@@ -1105,15 +1119,15 @@ class ChannelMod(Auth):
             "link": link
         }
         req = requests.post(f"{self.API_URL}/add_channel_link", headers=self.HEADERS, json=data)
-        logging.info(req)
-        return req.json()
+        return req
 
+    @validate_response
     def remove_link(self, channel):
         """ (Clubhouse, str, str) -> dict
 
         Remove pinned room link.
         """
-        channel_info = get_channel(self, channel, channel_id=None)
+        channel_info = Channel.get_channel(channel, channel_id=None)
         link_id = channel_info['links'][0]['link_id']
 
         data = {
@@ -1121,9 +1135,9 @@ class ChannelMod(Auth):
             "link": link_id
         }
         req = requests.post(f"{self.API_URL}/remove_channel_link", headers=self.HEADERS, json=data)
-        logging.info(req)
-        return req.json()
+        return req
 
+    @validate_response
     def make_public(self, channel, channel_id=None):
         """ (Clubhouse, str, int) -> dict
 
@@ -1135,9 +1149,9 @@ class ChannelMod(Auth):
             "channel_id": channel_id
         }
         req = requests.post(f"{self.API_URL}/make_channel_public", headers=self.HEADERS, json=data)
-        logging.info(req)
-        return req.json()
+        return req
 
+    @validate_response
     def make_social(self, channel, channel_id=None):
         """ (Clubhouse, str, int) -> dict
 
@@ -1149,9 +1163,9 @@ class ChannelMod(Auth):
             "channel_id": channel_id
         }
         req = requests.post(f"{self.API_URL}/make_channel_social", headers=self.HEADERS, json=data)
-        logging.info(req)
-        return req.json()
+        return req
 
+    @validate_response
     def end_channel(self, channel, channel_id=None):
         """ (Clubhouse, str, int) -> dict
 
@@ -1162,9 +1176,9 @@ class ChannelMod(Auth):
             "channel_id": channel_id
         }
         req = requests.post(f"{self.API_URL}/end_channel", headers=self.HEADERS, json=data)
-        logging.info(req)
-        return req.json()
+        return req
 
+    @validate_response
     def remove_user(self, channel, user_id):
         """ (Clubhouse, str, int) -> dict
 
@@ -1175,9 +1189,9 @@ class ChannelMod(Auth):
             "user_id": int(user_id)
         }
         req = requests.post(f"{self.API_URL}/block_from_channel", headers=self.HEADERS, json=data)
-        logging.info(req)
-        return req.json()
+        return req
 
+    @validate_response
     def change_handraising(self, channel, is_enabled=True, handraise_permission=1):
         """ (Clubhouse, bool, int) -> dict
 
@@ -1200,14 +1214,14 @@ class ChannelMod(Auth):
             "handraise_permission": handraise_permission
         }
         req = requests.post(f"{self.API_URL}/change_handraise_settings", headers=self.HEADERS, json=data)
-        logging.info(req)
-        return req.json()
+        return req
 
 
 class ChannelChat(Auth):
     def __init__(self):
         super().__init__()
 
+    @validate_response
     def get_chat(self, channel):
         """ (Clubhouse, str) -> dict
 
@@ -1215,9 +1229,9 @@ class ChannelChat(Auth):
         """
         query = f"channel={channel}&is_chronological_order=0"
         req = requests.get(f"{self.API_URL}/get_channel_messages?{query}", headers=self.HEADERS)
-        logging.info(req)
-        return req.json()
+        return req
 
+    @validate_response
     def send_chat(self, channel, message):
         """ (Clubhouse, str, str) -> dict
 
@@ -1228,8 +1242,7 @@ class ChannelChat(Auth):
             "message": message
         }
         req = requests.post(f"{self.API_URL}/send_channel_message", headers=self.HEADERS, json=data)
-        logging.info(req)
-        return req.json()
+        return req
 
 
 class Message(Auth):
@@ -1237,15 +1250,16 @@ class Message(Auth):
         super().__init__()
 
     # Does this work?
+    @validate_response
     def get_message_feed(self):
         """ (Clubhouse, str, str) -> dict
 
         Get events for the specific user.
         """
         req = requests.get(f"{self.API_URL}/get_chats", headers=self.HEADERS)
-        logging.info(req)
-        return req.json()
+        return req
 
+    @validate_response
     def create_message(self, participant_ids):
         """ (Clubhouse, list) -> dict
 
@@ -1256,9 +1270,9 @@ class Message(Auth):
             "participant_ids": participant_ids
         }
         req = requests.post(f"{self.API_URL}/create_chat", headers=self.HEADERS, json=data)
-        logging.info(req)
-        return req.json()
+        return req
 
+    @validate_response
     def search_messages(self, participant_ids):
         """ (Clubhouse, str, str) -> dict
 
@@ -1269,57 +1283,53 @@ class Message(Auth):
             "participant_ids": participant_ids
         }
         req = requests.post(f"{self.API_URL}/search_chats", headers=self.HEADERS, json=data)
-        logging.info(req)
-        return req.json()
+        return req
 
+    @validate_response
     def get_message(self, chat_id):
         """ (Clubhouse, str) -> dict
 
         Get events for the specific user.
         """
         req = requests.get(f"{self.API_URL}/get_chat_messages?chat_id={chat_id}", headers=self.HEADERS)
-        logging.info(req)
-        return req.json()
+        return req
 
+    @validate_response
     def get_message_thread(self, participant_ids):
         """ (Clubhouse, str, list) -> dict
 
         Get events for the specific user.
         """
-        _search = self.search_chats(participant_ids)
-
-        if _search["success"]:
-
-            if len(_search["chats"]) > 0:
-                chat_id = _search["chats"][0]["chat_id"]
-                req = self.get_chat_messages(chat_id)
-
-            else:
-                return "[.] No chat history"
-        logging.info(req)
-        return req.json
+        _search = self.search_messages(participant_ids)
+        req = {"success": False, "Internal Response": "No chat history"}
+        if _search.get("success"):
+            if _search.get("chats"):
+                chat_id = _search.get("chats")[0].get("chat_id")
+                req = self.get_message(chat_id)
+        return req
 
     def get_message_id(self, participant_ids):
         chat_id = False
-        _search = self.search_backchannel(participant_ids)
-        if _search["success"]:
-            if len(_search["chats"]) > 0:
-                chat_id = _search["chats"][0]["chat_id"]
+        _search = self.search_messages(participant_ids)
+        if _search.get("success"):
+            if _search.get("chats"):
+                chat_id = _search.get("chats")[0].get("chat_id")
         else:
-            req = self.create_backchannel(participant_ids)
+            req = self.create_message(participant_ids)
             if req.get("success"):
                 chat_id = req["chat_id"]
-        logging.info(req)
+                logging.info(req)
         return chat_id
 
     # Check to see if this is correct
+    @validate_response
     def send(self, message, chat_id=None, participant_ids=None):
         """ (Clubhouse, str, list) -> dict
 
         Get events for the specific user.
         """
         if not chat_id:
-            chat_id = self.get_chat_id(participant_ids)
+            chat_id = self.get_message_id(participant_ids)
 
         data = {
             "chat_id": chat_id,
@@ -1328,14 +1338,14 @@ class Message(Auth):
         }
 
         req = requests.post(f"{self.API_URL}/send_chat_message", headers=self.HEADERS, json=data)
-        logging.info(req)
-        return req.json()
+        return req
 
 
 class Event(Auth):
     def __init__(self):
         super().__init__()
 
+    @validate_response
     def get_event(self, event_id=None, user_ids=None, club_id=None, is_member_only=False, event_hashid=None,
                   description=None, time_start_epoch=None, name=None):
         """ (Clubhouse, int, list, int, bool, int, str, int, str) -> dict
@@ -1353,9 +1363,9 @@ class Event(Auth):
             # "name": name
         }
         req = requests.post(f"{self.API_URL}/get_event", headers=self.HEADERS, json=data)
-        logging.info(req)
-        return req.json()
+        return req
 
+    @validate_response
     def create_event(self, name, time_start_epoch, description, event_id=None, user_ids=(), club_id=None,
                is_member_only=False, event_hashid=None):
         """ (Clubhouse, str, int, str, int, list, int, bool, int) -> dict
@@ -1373,9 +1383,9 @@ class Event(Auth):
             "name": name
         }
         req = requests.post(f"{self.API_URL}/edit_event", headers=self.HEADERS, json=data)
-        logging.info(req)
-        return req.json()
+        return req
 
+    @validate_response
     def edit_event(self, name, time_start_epoch, description, event_id=None, user_ids=(), club_id=None,
              is_member_only=False, event_hashid=None):
         """ (Clubhouse, str, int, str, int, list, int, bool, int) -> dict
@@ -1393,9 +1403,9 @@ class Event(Auth):
             "name": name
         }
         req = requests.post(f"{self.API_URL}/edit_event", headers=self.HEADERS, json=data)
-        logging.info(req)
-        return req.json()
+        return req
 
+    @validate_response
     def delete_event(self, event_id, user_ids=None, club_id=None, is_member_only=False, event_hashid=None,
                description=None, time_start_epoch=None, name=None):
         """ (Clubhouse, str, list, int, bool, int, str, int, str) -> dict
@@ -1413,9 +1423,9 @@ class Event(Auth):
             "name": name
         }
         req = requests.post(f"{self.API_URL}/delete_event", headers=self.HEADERS, json=data)
-        logging.info(req)
-        return req.json()
+        return req
 
+    @validate_response
     def get_events(self, is_filtered=True, page_size=25, page=1):
         """ (Clubhouse, bool, int, int) -> dict
 
@@ -1428,19 +1438,19 @@ class Event(Auth):
             page
         )
         req = requests.get(f"{self.API_URL}/get_events?{query}", headers=self.HEADERS)
-        logging.info(req)
-        return req.json()
+        return req
 
     # What is this?
+    @validate_response
     def get_events_to_start(self):
         """ (Clubhouse) -> dict
 
         Get events to start
         """
         req = requests.get(f"{self.API_URL}/get_events_to_start", headers=self.HEADERS)
-        logging.info(req)
-        return req.json()
+        return req
 
+    @validate_response
     def get_events_for_user(self, user_id='', page_size=25, page=1):
         """ (Clubhouse, str, int, int) -> dict
 
@@ -1448,14 +1458,14 @@ class Event(Auth):
         """
         query = f"user_id={user_id}&page_size={page_size}&page={page}"
         req = requests.get(f"{self.API_URL}/get_events_for_user?{query}", headers=self.HEADERS)
-        logging.info(req)
-        return req.json()
+        return req
 
 
 class Club(Auth):
     def __init__(self):
         super().__init__()
 
+    @validate_response
     def get_club(self, club_id, source_topic_id=None):
         """ (Clubhouse, int, int) -> dict
 
@@ -1469,9 +1479,9 @@ class Club(Auth):
             "slug": None,
         }
         req = requests.post(f"{self.API_URL}/get_club", headers=self.HEADERS, json=data)
-        logging.info(req)
-        return req.json()
+        return req
 
+    @validate_response
     def get_members(self, club_id, return_followers=False, return_members=True, page_size=50, page=1):
         """ (Clubhouse, int, bool, bool, int, int) -> dict
 
@@ -1485,9 +1495,9 @@ class Club(Auth):
             page
         )
         req = requests.get(f"{self.API_URL}/get_club_members?{query}", headers=self.HEADERS)
-        logging.info(req)
-        return req.json()
+        return req
 
+    @validate_response
     def join_club(self, club_id, source_topic_id=None):
         """ (Clubhouse, int, int) -> dict
 
@@ -1498,9 +1508,9 @@ class Club(Auth):
             "source_topic_id": source_topic_id
         }
         req = requests.post(f"{self.API_URL}/join_club", headers=self.HEADERS, json=data)
-        logging.info(req)
-        return req.json()
+        return req
 
+    @validate_response
     def leave_club(self, club_id, source_topic_id=None):
         """ (Clubhouse, int, int) -> dict
 
@@ -1511,9 +1521,9 @@ class Club(Auth):
             "source_topic_id": source_topic_id
         }
         req = requests.post(f"{self.API_URL}/leave_club", headers=self.HEADERS, json=data)
-        logging.info(req)
-        return req.json()
+        return req
 
+    @validate_response
     def add_club_admin(self, club_id, user_id):
         """ (Clubhouse, int, int) -> dict
 
@@ -1524,9 +1534,9 @@ class Club(Auth):
             "user_id": int(user_id)
         }
         req = requests.post(f"{self.API_URL}/add_club_admin", headers=self.HEADERS, json=data)
-        logging.info(req)
-        return req.json()
+        return req
 
+    @validate_response
     def remove_club_admin(self, club_id, user_id):
         """ (Clubhouse, int, int) -> dict
 
@@ -1537,9 +1547,9 @@ class Club(Auth):
             "user_id": int(user_id)
         }
         req = requests.post(f"{self.API_URL}/remove_club_admin", headers=self.HEADERS, json=data)
-        logging.info(req)
-        return req.json()
+        return req
 
+    @validate_response
     def remove_club_member(self, club_id, user_id):
         """ (Clubhouse, int, int) -> dict
 
@@ -1550,9 +1560,9 @@ class Club(Auth):
             "user_id": int(user_id)
         }
         req = requests.post(f"{self.API_URL}/remove_club_member", headers=self.HEADERS, json=data)
-        logging.info(req)
-        return req.json()
+        return req
 
+    @validate_response
     def accept_club_member_invite(self, club_id, source_topic_id=None, invite_code=None):
         """ (Clubhouse, int, int, str) -> dict
 
@@ -1567,9 +1577,9 @@ class Club(Auth):
             "source_topic_id": source_topic_id
         }
         req = requests.post(f"{self.API_URL}/accept_club_member_invite", headers=self.HEADERS, json=data)
-        logging.info(req)
-        return req.json()
+        return req
 
+    @validate_response
     def add_club_member(self, club_id, user_id, name, phone_number, message, reason):
         """ (Clubhouse, int, int, str, str, str, unknown) -> dict
 
@@ -1584,9 +1594,9 @@ class Club(Auth):
             "reason": reason
         }
         req = requests.post(f"{self.API_URL}/add_club_member", headers=self.HEADERS, json=data)
-        logging.info(req)
-        return req.json()
+        return req
 
+    @validate_response
     def get_club_nominations(self, club_id, source_topic_id):
         """ (Club, int, int) -> dict
 
@@ -1597,8 +1607,7 @@ class Club(Auth):
             "source_topic_id": source_topic_id
         }
         req = requests.post(f"{self.API_URL}/get_club_nominations", headers=self.HEADERS, json=data)
-        logging.info(req)
-        return req.json()
+        return req
 
     def approve_club_nomination(self, club_id, source_topic_id, invite_nomination_id):
         """ (Club, int, int) -> dict
@@ -1611,9 +1620,9 @@ class Club(Auth):
             "invite_nomination_id": invite_nomination_id
         }
         req = requests.post(f"{self.API_URL}/approve_club_nomination", headers=self.HEADERS, json=data)
-        logging.info(req)
-        return req.json()
+        return req
 
+    @validate_response
     def reject_club_nomination(self, club_id, source_topic_id, invite_nomination_id):
         """ (Club, int, int) -> dict
 
@@ -1625,9 +1634,9 @@ class Club(Auth):
             "invite_nomination_id": invite_nomination_id
         }
         req = requests.post(f"{self.API_URL}/approve_club_nomination", headers=self.HEADERS, json=data)
-        logging.info(req)
-        return req.json()
+        return req
 
+    @validate_response
     def add_club_topic(self, club_id, topic_id):
         """ (Club, int, int) -> dict
 
@@ -1638,9 +1647,9 @@ class Club(Auth):
             "topic_id": int(topic_id)
         }
         req = requests.post(f"{self.API_URL}/add_club_topic", headers=self.HEADERS, json=data)
-        logging.info(req)
-        return req.json()
+        return req
 
+    @validate_response
     def remove_club_topic(self, club_id, topic_id):
         """ (Club, int, int) -> dict
 
@@ -1651,9 +1660,9 @@ class Club(Auth):
             "topic_id": int(topic_id)
         }
         req = requests.post(f"{self.API_URL}/remove_club_topic", headers=self.HEADERS, json=data)
-        logging.info(req)
-        return req.json()
+        return req
 
+    @validate_response
     def update_is_follow_allowed(self, club_id, is_follow_allowed=True):
         """ (Clubhouse, int, bool) -> dict
 
@@ -1664,9 +1673,9 @@ class Club(Auth):
             "is_follow_allowed": is_follow_allowed
         }
         req = requests.post(f"{self.API_URL}/update_is_follow_allowed", headers=self.HEADERS, json=data)
-        logging.info(req)
-        return req.json()
+        return req
 
+    @validate_response
     def update_is_membership_private(self, club_id, is_membership_private=False):
         """ (Clubhouse, int, bool) -> dict
 
@@ -1678,9 +1687,9 @@ class Club(Auth):
             "is_membership_private": is_membership_private
         }
         req = requests.post(f"{self.API_URL}/update_is_membership_private", headers=self.HEADERS, json=data)
-        logging.info(req)
-        return req.json()
+        return req
 
+    @validate_response
     def update_is_community(self, club_id, is_community=False):
         """ (Clubhouse, int, bool) -> dict
 
@@ -1691,9 +1700,9 @@ class Club(Auth):
             "is_community": is_community
         }
         req = requests.post(f"{self.API_URL}/update_is_community", headers=self.HEADERS, json=data)
-        logging.info(req)
-        return req.json()
+        return req
 
+    @validate_response
     def update_club_description(self, club_id, description):
         """ (Clubhouse, int, str) -> dict
 
@@ -1704,9 +1713,9 @@ class Club(Auth):
             "description": description
         }
         req = requests.post(f"{self.API_URL}/update_club_description", headers=self.HEADERS, json=data)
-        logging.info(req)
-        return req.json()
+        return req
 
+    @validate_response
     def update_club_rules(self, club_id='', rules=()):
         """ (Clubhouse, str, list) -> dict
 
@@ -1718,23 +1727,23 @@ class Club(Auth):
             "rules": rules if rules else [],
         }
         req = requests.post(f"{self.API_URL}/update_club_rules", headers=self.HEADERS, json=data)
-        logging.info(req)
-        return req.json()
+        return req
 
 
 class Topic(Auth):
     def __init__(self):
         super().__init__()
 
+    @validate_response
     def get_all_topics(self):
         """ (Clubhouse) -> dict
 
         Get list of topics, based on the server's channel selection algorithm
         """
         req = requests.get(f"{self.API_URL}/get_all_topics", headers=self.HEADERS)
-        logging.info(req)
-        return req.json()
+        return req
 
+    @validate_response
     def get_topic(self, topic_id):
         """ (Clubhouse, int) -> dict
 
@@ -1744,9 +1753,9 @@ class Topic(Auth):
             "topic_id": int(topic_id)
         }
         req = requests.post(f"{self.API_URL}/get_topic", headers=self.HEADERS, json=data)
-        logging.info(req)
-        return req.json()
+        return req
 
+    @validate_response
     def get_users_for_topic(self, topic_id, page_size=25, page=1):
         """ (Clubhouse, int, int, int) -> dict
 
@@ -1758,9 +1767,9 @@ class Topic(Auth):
             page
         )
         req = requests.get(f"{self.API_URL}/get_users_for_topic?{query}", headers=self.HEADERS)
-        logging.info(req)
-        return req.json()
+        return req
 
+    @validate_response
     def get_clubs_for_topic(self, topic_id, page_size=25, page=1):
         """ (Clubhouse, int, int, int) -> dict
 
@@ -1772,8 +1781,7 @@ class Topic(Auth):
             page
         )
         req = requests.get(f"{self.API_URL}/get_clubs_for_topic?{query}", headers=self.HEADERS)
-        logging.info(req)
-        return req.json()
+        return req
 
 
 
