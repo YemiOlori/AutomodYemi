@@ -27,14 +27,6 @@ class AutoModClient(Mod, Chat, Audio):
         AutoModClient.data_dump(join_dict, 'join_channel', channel)
         return True
 
-    def chat_client(self, channel, chat_stream=None):
-        chat_triggers = self.get_chat_stream(channel, chat_stream)
-        if not chat_triggers:
-            return False
-        trigger_dict = self.check_command(chat_triggers)
-        self.UrbanDict.urban_dict(channel, trigger_dict)
-        return True
-
     def speaker_status(self, client_info):
         if not client_info.get("is_speaker"):
             self.active_speaker = False
@@ -59,21 +51,21 @@ class AutoModClient(Mod, Chat, Audio):
         is_speaker = self.speaker_status(client_info)
         is_moderator = self.mod_status(client_info)
 
-        reset = False
-        if self.granted_speaker and not is_speaker:
-            logging.info("Client is no longer speaker")
-            reset = self.reset_speaker(channel)
-        elif mod_mode and self.granted_mod and not is_moderator:
-            logging.info("Client is no longer mod")
-            reset = self.reset_mod(channel)
-        if not reset:
-            self.terminate_channel(channel)
+        # reset = False
+        # if self.granted_speaker and not is_speaker:
+        #     logging.info("Client is no longer speaker")
+        #     reset = self.reset_speaker(channel)
+        # elif mod_mode and self.granted_mod and not is_moderator:
+        #     logging.info("Client is no longer mod")
+        #     reset = self.reset_mod(channel)
+        # if not reset:
+        #     self.terminate_channel(channel)
 
         return channel_dict
 
     @set_interval(15)
     def channel_public(self, channel):
-        self.chat_client(self, channel)
+        self.run_chat_client(channel, interval=15)
         channel_dict = self.get_client_channel_status(channel, True)
         # Make sure that client is active speaker before running this function
         # Make sure that client is active mod before running this function
@@ -95,7 +87,7 @@ class AutoModClient(Mod, Chat, Audio):
 
     @set_interval(15)
     def channel_private_club(self, channel):
-        self.chat_client(self, channel)
+        self.run_chat_client(channel, interval=15)
         channel_dict = self.get_client_channel_status(channel, True)
         # Make sure that client is active speaker before running this function
         # Make sure that client is active mod before running this function
@@ -114,7 +106,7 @@ class AutoModClient(Mod, Chat, Audio):
 
     @set_interval(15)
     def channel_social_or_private(self, channel):
-        self.chat_client(self, channel)
+        self.run_chat_client(channel, interval=15)
         channel_dict = self.get_client_channel_status(channel)
         # Make sure that client is active speaker before running this function
         # Make sure that client is active mod before running this function
