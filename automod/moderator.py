@@ -24,7 +24,6 @@ class ModClient(Clubhouse):
 
     def __init__(self):
         self.clubhouse_mod = super().__init__()
-        self.s3_bucket = Config.config_to_dict(Config.load_config(), "S3", "bucket")
         self.automod_clubs = Config.config_to_list(Config.load_config(), "AutoModClubs")
         self.social_clubs = Config.config_to_list(Config.load_config(), "SocialClubs")
         self.respond_ping_list = Config.config_to_list(Config.load_config(), "RespondPing")
@@ -57,51 +56,89 @@ class ModClient(Clubhouse):
         self.dump_counter = 0
 
     def __str__(self):
-        return f"Config: [Clubhouse User ID: {self.client_id}, [Amazon S3 Bucket: " \
-               f"{self.s3_bucket}]"
+        return f"Config: [Clubhouse User ID: {self.client_id}]"
 
-    def s3_client_dump(self, dump, key):
-        """
-        A function to set the interval decorator.
+    def _get_join_info(self, channel):
+        join_dict = self.channel.get_channel(channel)
+        return join_dict
 
-        :param dump: The server data to be dumped
-        :type dump: any
-        :param key: A label for the dump file
-        :type key: str
-        :return: Server response
-        :rtype: bool
-        """
-        if isinstance(dump, dict):
-            dump = json.dumps(dump)
-        s3_client = boto3.client("s3")
-        bucket = self.s3_bucket
-        timestamp = datetime.now(pytz.timezone('UTC')).isoformat()
-        key = f"{key}_{timestamp}.json"
-        run = s3_client.put_object(
-            Body=dump,
-            Bucket=bucket,
-            Key=key,
-        )
-        response = run.get("success")
-        logging.info(run)
-        return response
+    @staticmethod
+    def _get_channel_type(join_dict):
+        if not join_dict.get("success"):
+            return False
 
-    def data_dump(self, dump, source, channel=""):
-        log = f"Dumped {source} {channel}"
-        if source == "feed":
-            key = source
-        elif source == "channel":
-            key = f"channel_{dump.get('channel')}"
-        elif source == "channel_dict":
-            key = f"channel_{dump.get('channel_info').get('channel')}"
-        elif source == 'join':
-            key = f"join_{dump.get('channel')}"
-        else:
-            key = "unrecognized"
-            log = f"Unrecognized dumping source {source}"
-        logging.info(log)
-        response = self.s3_client_dump(dump, key)
-        return response
+        _type = "public"
+        if join_dict.get("is_private"):
+            _type = "private"
+        elif join_dict.get("is_social_mode"):
+            _channel_type = "social"
+        return _channel_type
+
+
+
+
+
+
+
+    def get_join_dict(self, channel):
+        def channel_type():
+            _channel_type = "public"
+            if join_dict.get("is_private"):
+                _channel_type = "private"
+            elif join_dict.get("is_social_mode"):
+                _channel_type = "social"
+            return _channel_type
+
+        def channel_creator():
+            """
+
+
+            :rtype
+            """
+            name = ""
+            for user in join_dict.get("users"):
+                if join_dict.get("creator_user_profile_id") == user.get("user_id"):
+                    name = user.get("first_name")
+                    break
+            return name
+
+        def club():
+            _club = join_dict.get("club").get("club_id")
+            logging.info(join_dict.get("club"))
+            logging.info(join_dict.get("club").get("club_id"))
+            return _club
+
+        join_dict = self.channel.join_channel(channel)
+
+        response_dict = {
+            "join_dict": join_dict,
+            "type": channel_type(),
+            "creator": channel_creator(),
+            "club": club(),
+        }
+        return response_dict
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
 
     @set_interval(30)
     def keep_alive_ping(self, channel):
@@ -168,43 +205,7 @@ class ModClient(Clubhouse):
             response = self.set_announcement(channel, message, interval)
             return response
 
-    def get_join_dict(self, channel):
-        def channel_type():
-            _channel_type = "public"
-            if join_dict.get("is_private"):
-                _channel_type = "private"
-            elif join_dict.get("is_social_mode"):
-                _channel_type = "social"
-            return _channel_type
 
-        def channel_creator():
-            """
-
-
-            :rtype
-            """
-            name = ""
-            for user in join_dict.get("users"):
-                if join_dict.get("creator_user_profile_id") == user.get("user_id"):
-                    name = user.get("first_name")
-                    break
-            return name
-
-        def club():
-            _club = join_dict.get("club").get("club_id")
-            logging.info(join_dict.get("club"))
-            logging.info(join_dict.get("club").get("club_id"))
-            return _club
-
-        join_dict = self.channel.join_channel(channel)
-
-        response_dict = {
-            "join_dict": join_dict,
-            "type": channel_type(),
-            "creator": channel_creator(),
-            "club": club(),
-        }
-        return response_dict
 
     def get_channel_dict(self, channel):
         """Retrieves information about the active channel"""
