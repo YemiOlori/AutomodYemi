@@ -11,7 +11,7 @@ import logging
 from .clubhouse import Clubhouse
 
 
-class AudioClient(Clubhouse):
+class AudioClient:
 
     AGORA_KEY = Clubhouse.AGORA_KEY
 
