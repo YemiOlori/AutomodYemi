@@ -19,6 +19,7 @@ from .clubhouse import Clubhouse
 
 
 class ModClient(Clubhouse):
+    set_interval = Clubhouse.set_interval
 
     # Should I add phone number and verification code to __init__?
     # Add pickling to save data in case client refreshes before channel ends
@@ -26,70 +27,6 @@ class ModClient(Clubhouse):
         super().__init__()
 
         self.config = Config.load_config()
-
-    def __str__(self):
-        return f"Config: [Clubhouse User ID: {self.client_id}]"
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-        set_interval = Clubhouse.set_interval
-
-
-
         self.automod_clubs = Config.config_to_list(Config.load_config(), "AutoModClubs", True)
         self.social_clubs = Config.config_to_list(Config.load_config(), "SocialClubs", True)
         # self.respond_ping_list = Config.config_to_list(Config.load_config(), "RespondPing", True)
@@ -131,6 +68,8 @@ class ModClient(Clubhouse):
         self.dump_counter = 0
 
 
+    def __str__(self):
+        return f"Config: [Clubhouse User ID: {self.client_id}]"
 
     def get_join_dict(self, channel):
         join_info = self._get_join_info(channel)
@@ -260,8 +199,6 @@ class ModClient(Clubhouse):
         logging.info(token)
         return token
 
-
-
     def _get_channel_info(self, channel):
         channel_info = self.channel.get_channel(channel)
         return channel_info
@@ -371,50 +308,6 @@ class ModClient(Clubhouse):
         message = "If you'd like to hear music, please invite me to speak. 🎶"
         return message
 
-    def _set_targeted_message(self):
-
-        targeted_message = None
-
-        if self.waiting_mod and self.waiting_speaker:
-            targeted_message = self._request_speak_and_mod_message()
-
-        elif self.waiting_mod:
-            targeted_message = self._request_mod_message()
-
-        elif self.waiting_speaker:
-            targeted_message = self._request_speak_message()
-
-        return targeted_message
-
-    @staticmethod
-    def set_hello_message(join_dict, targeted_message=None):
-        message = f"🤖 Hello {join_dict.get('host_name')}! I'm AutoMod! 🎉"
-
-        if isinstance(targeted_message, str):
-            message = [message + targeted_message]
-
-        elif isinstance(targeted_message, list):
-            message = [message] + targeted_message
-
-        return message
-
-    def send_room_chat(self, channel, message, delay=10):
-        if not message:
-            return
-
-        response = False
-        if isinstance(message, str):
-            message = [message]
-
-        for item in message:
-            run = self.chat.send_chat(channel, item)
-            if not run:
-                return
-
-            response = run.get("success")
-            time.sleep(delay)
-
-        return response
 
     def _check_speaker_status(self, channel, interval, active_speaker_status):
 
