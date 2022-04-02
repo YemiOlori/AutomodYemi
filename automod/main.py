@@ -21,13 +21,15 @@ class AutoModClient(Mod, Chat, Audio):
     def __init__(self):
         super().__init__()
 
+
+
     @set_interval(180)
-    def track_room_client(self, channel):
+    def xtrack_room_client(self, channel):
         join_dict = self.channel.join_channel(channel)
         AutoModClient.data_dump(join_dict, 'join_channel', channel)
         return True
 
-    def speaker_status(self, client_info):
+    def xspeaker_status(self, client_info):
         if not client_info.get("is_speaker"):
             self.active_speaker = False
             return False
@@ -36,7 +38,7 @@ class AutoModClient(Mod, Chat, Audio):
             self.waiting_speaker_thread.set()
         return True
 
-    def mod_status(self, client_info):
+    def xmod_status(self, client_info):
         if not client_info.get("is_moderator"):
             self.active_mod = False
             return False
@@ -45,7 +47,7 @@ class AutoModClient(Mod, Chat, Audio):
             self.waiting_mod_thread.set()
         return True
 
-    def get_client_channel_status(self, channel, mod_mode=False):
+    def xget_client_channel_status(self, channel, mod_mode=False):
         channel_dict = self.get_channel_dict(channel)
         client_info = channel_dict.get("client_info")
         is_speaker = self.speaker_status(client_info)
@@ -64,7 +66,7 @@ class AutoModClient(Mod, Chat, Audio):
         return channel_dict
 
     @set_interval(15)
-    def channel_public(self, channel):
+    def xchannel_public(self, channel):
         self.run_chat_client(channel, interval=15)
         channel_dict = self.get_client_channel_status(channel, True)
         # Make sure that client is active speaker before running this function
@@ -86,7 +88,7 @@ class AutoModClient(Mod, Chat, Audio):
         self.dump_counter += 1
 
     @set_interval(15)
-    def channel_private_club(self, channel):
+    def xchannel_private_club(self, channel):
         self.run_chat_client(channel, interval=15)
         channel_dict = self.get_client_channel_status(channel, True)
         # Make sure that client is active speaker before running this function
@@ -105,7 +107,7 @@ class AutoModClient(Mod, Chat, Audio):
         return True
 
     @set_interval(15)
-    def channel_social_or_private(self, channel):
+    def xchannel_social_or_private(self, channel):
         self.run_chat_client(channel, interval=15)
         channel_dict = self.get_client_channel_status(channel)
         # Make sure that client is active speaker before running this function
@@ -118,7 +120,7 @@ class AutoModClient(Mod, Chat, Audio):
             if _user_id not in self.already_welcomed_list and _user_id not in self.already_in_room_list:
                 self.welcome_guests(channel, _user)
 
-    def terminate_channel(self, channel):
+    def xterminate_channel(self, channel):
         self.channel.leave_channel(channel)
 
         status_list = ["active_speaker", "waiting_speaker", "active_mod", "waiting_mod"]
@@ -135,7 +137,7 @@ class AutoModClient(Mod, Chat, Audio):
         self.waiting_ping_thread = self.listen_channel_ping()
         logging.info("Automation terminated")
 
-    def init_channel(self, channel, join_info):
+    def xinit_channel(self, channel, join_info):
         if self.waiting_ping_thread:
             self.waiting_ping_thread.set()
 
@@ -168,7 +170,7 @@ class AutoModClient(Mod, Chat, Audio):
             self.send_room_chat(channel, hello_message)
             self.active_mod_thread = self.channel_social_or_private(channel)
 
-    def set_ping_responder(self, notification, _channel):
+    def xset_ping_responder(self, notification, _channel):
 
         time_created = notification.get("time_created")
         time_created = datetime.strptime(time_created, '%Y-%m-%dT%H:%M:%S.%f%z')
@@ -197,7 +199,7 @@ class AutoModClient(Mod, Chat, Audio):
         return join
 
     @set_interval(30)
-    def listen_channel_ping(self):
+    def xlisten_channel_ping(self):
         """
         A function listen for active ping from user on approved ping list.
 
@@ -233,7 +235,7 @@ class AutoModClient(Mod, Chat, Audio):
 
         return True
 
-    def init_automod(self, announcement=None, music=False, dump_interval=180):
+    def xinit_automod(self, announcement=None, music=False, dump_interval=180):
         self.waiting_ping_thread = self.listen_channel_ping()
         self.dump_interval = dump_interval / 15
 
