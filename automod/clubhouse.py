@@ -81,12 +81,16 @@ class Config:
         return config_item
 
     @staticmethod
-    def config_to_list(config_object, section):
+    def config_to_list(config_object, section, num=False):
         Config.section_key_exception(config_object, section)
         config_section = config_object[section]
         item_list = []
         for item in config_section:
-            item_list.append(config_section[item])
+            if num:
+                item = config_section[item]
+                item = int(item)
+            item_list.append(item)
+
         config_section = item_list
         # Return None if section does not exist
         return config_section
