@@ -10,6 +10,7 @@ from .clubhouse import Auth
 from .clubhouse import ChannelChat
 from .clubhouse import Message
 from .clubhouse import User
+from .fancytext import fancy
 
 
 class ChatConfig(Auth):
@@ -24,8 +25,6 @@ class ChatConfig(Auth):
     MW_PREFIXES = ("/def", "/dict")
     IMDB_PREFIXES = ("/imdb")
 
-    def __init__(self):
-        pass
 
 
 class ChatClient(ChatConfig):
@@ -132,10 +131,10 @@ class ChatClient(ChatConfig):
             if command.startswith(self.UD_PREFIXES):
                 ud_list.append(message)
 
-            elif message.startswith(self.MW_PREFIXES):
+            elif command.startswith(self.MW_PREFIXES):
                 mw_list.append(message)
 
-            elif message.startswith(self.IMDB_PREFIXES):
+            elif command.startswith(self.IMDB_PREFIXES):
                 imdb_list.append(message)
 
         ud_list.reverse()
@@ -327,7 +326,11 @@ class UrbanDict(ChatConfig):
             term = response.get("term")
             definition = response.get("definition")
 
-            reply_message = f"@{user_name} 𝗨𝗿𝗯𝗮𝗻 𝗗𝗶𝗰𝘁𝗶𝗼𝗻𝗮𝘆 [{term}] - {definition}"
+            term = f"Urban Dictionary [lookup: {term}]"
+            term = fancy.bold_serif(term)
+
+            reply_message = f"@{user_name} {term}—{definition}"
+            print(reply_message)
             response_list.append(reply_message)
             logging.info(reply_message)
             self.ud_term_defined_list.append(term)
