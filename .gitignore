@@ -193,3 +193,4 @@ automod/logger.py
 automod/clubhouse copy.py
 automod/clubhouse_copy.py
 .virtual_documents/test.feature
+moderator_v2.py
