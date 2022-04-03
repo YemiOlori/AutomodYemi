@@ -42,14 +42,16 @@ def validate_response(func):
     @wraps(func)  # Is this in the right place?
     def wrap(*args, **kwargs):
         req = func(*args, **kwargs)
+        log = f"{func.__name__} {req}"
         if req.status_code == 200:
             response = req.json()
         elif req.status_code:
             response = {"success": False}
+            log = f"{func.__name__} {req.json}"
         else:
             response = {"success": False}
 
-        logging.info(f"{func.__name__} {req}")
+        logging.info(log)
 
         return response
 
