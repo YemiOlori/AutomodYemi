@@ -185,17 +185,17 @@ node_modules
 automod/mod_config.py
 automod/logger_test.py
 *.ini
-*.log
+*.icloud
 
 
 automod/logger.py
 /automod/logger_2.py
 automod/clubhouse copy.py
-automod/clubhouse_copy.py
 .virtual_documents/test.feature
 moderator_v2.py
 /automod/cli_old.py
 /automod/clubhose_v1.py
-
 gui.py
 automod/clubhouse_v1.py
+automod/automod_v1.py
+automod/moderator_v1.py
