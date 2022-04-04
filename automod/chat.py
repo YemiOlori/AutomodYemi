@@ -9,8 +9,8 @@ from .clubhouse import Config
 from .clubhouse import Auth
 from .clubhouse import ChannelChat
 from .clubhouse import Message
-from .clubhouse import User
 from .fancytext import fancy
+from .clubhouse import validate_response
 
 
 class ChatConfig(Auth):
@@ -23,22 +23,35 @@ class ChatConfig(Auth):
 
     UD_PREFIXES = ("/urban", "/ud")
     MW_PREFIXES = ("/def", "/dict")
-    IMDB_PREFIXES = ("/imdb")
-
-
-
-class ChatClient(ChatConfig):
-
-    command_responded_list = []
+    IMDB_PREFIXES = ("/imdb", "/IMDB")
 
     def __init__(self):
         """
 
         """
         super().__init__()
-        self.UrbanDict = UrbanDict()
         self.chat = ChannelChat()
         self.message = Message()
+
+    def send_command_response(self, channel, message, delay=10):
+        response = False
+
+        if isinstance(message, str):
+            message = [message]
+
+        for _ in message:
+            run = self.chat.send_chat(channel, _)
+            response = run.get("success")
+            time.sleep(delay)
+
+        return response
+
+
+class ChatClient(ChatConfig):
+
+    def __init__(self):
+        super().__init__()
+        self.urban_dict = UrbanDict()
 
     def __str__(self):
         """
@@ -46,148 +59,139 @@ class ChatClient(ChatConfig):
         """
         return f"ChatClient(host={self.HEADERS.get('X-RapidAPI-Host')}, key={self.HEADERS.get('X-RapidAPI-Key')})"
 
-    def check_chat_stream(self, channel, chat_stream=None):
-        if channel and not chat_stream:
-            chat_stream = self.chat.get_chat(channel)
+    def run_chat_client(self, channel, interval=120, delay=10):
+        self.ud_commands = []
+        self.mw_commands = []
+        self.imdb_commands = []
+
+
+        chat_stream = self.get_chat_stream(channel)
+        if not chat_stream:
+            return
+
+        chat_messages_list = self.check_for_messages(chat_stream)
+        if not chat_messages_list:
+            return
+
+        requests_list = self.check_for_command(chat_messages_list)
+        if not requests_list:
+            return
+
+        recent_requests_list = self.recent_requests_filter(requests_list, interval)
+        if not recent_requests_list:
+            return
+
+        self.filter_commands(recent_requests_list)
+
+        if self.ud_commands:
+            logging.info(self.ud_commands)
+            self.urban_dict.run_urban_dict_client(self.ud_commands, channel, delay)
+
+        if self.mw_commands:
+            pass
+
+        if self.imdb_commands:
+            pass
+
+        mw_client = []
+        imdb_client = []
+
+        return True
+
+    def get_chat_stream(self, channel):
+        chat_stream = self.chat.get_chat(channel)
         return chat_stream
 
     @staticmethod
     def check_for_messages(chat_stream):
-        if not isinstance(chat_stream, dict):
-            logging.info("No response from server")
-            return
+        messages = chat_stream.get("messages")
 
-        elif not chat_stream.get("success"):
-            logging.info("Chat stream not pulled")
-            return
-
-        elif chat_stream.get("messages"):
-            return chat_stream.get("messages")
-        else:
+        if not messages:
             logging.info("No messages in chat stream")
 
-    @staticmethod
-    def check_for_triggers(message_list):
-        if not message_list:
-            return
-
-        command_triggered_list = []
-        for message in message_list:
-            if message.get("message").startswith("/"):
-                logging.info(message)
-                command_triggered_list.append(message)
-
-        if command_triggered_list:
-            return command_triggered_list
-        else:
-            logging.info("No command triggers found")
+        return messages
 
     @staticmethod
-    def check_time_diff(command_triggered_list, interval):
-        if not command_triggered_list:
-            return
+    def check_for_command(chat_messages_list):
+
+        chat_command_list = []
+        for message_dict in chat_messages_list:
+            message = message_dict.get("message")
+
+            if message.startswith("/"):
+                chat_command_list.append(message_dict)
+
+        if not chat_command_list:
+            logging.info("No chat commands found")
+
+        return chat_command_list
+
+    @staticmethod
+    def recent_requests_filter(requests_list, interval):
 
         recent_commands_list = []
-        for message in command_triggered_list:
+        for message_dict in requests_list:
 
-            time_created = message.get("time_created")
+            time_created = message_dict.get("time_created")
             time_created = datetime.strptime(time_created, '%Y-%m-%dT%H:%M:%S.%f%z')
             time_now = datetime.now(pytz.timezone('UTC'))
             time_diff = time_now - time_created
             time_diff = time_diff.total_seconds()
 
             if time_diff <= interval:
-                recent_commands_list.append(message)
+                recent_commands_list.append(message_dict)
 
-        if recent_commands_list:
-            return recent_commands_list
-        else:
+        if not recent_commands_list:
             logging.info("No recent requests in chat stream")
 
-    def check_response_status(self, recent_requests):
-        if not recent_requests:
-            return
-
-        pending_requests_list = []
-        for message in recent_requests:
-            if not message.get("message_id") in self.command_responded_list:
-                pending_requests_list.append(message)
-                logging.info(f"Room chat command received: {message.get('message')}")
-
-        if len(pending_requests_list) > 0:
-            return pending_requests_list
-        else:
-            logging.info("No new requests in chat stream")
+        return recent_commands_list
 
     def filter_commands(self, pending_requests):
-        if not pending_requests:
-            return
 
         ud_list = []
         mw_list = []
         imdb_list = []
-        for message in pending_requests:
-            command = message.get("message").lower()
-            if command.startswith(self.UD_PREFIXES):
-                ud_list.append(message)
 
-            elif command.startswith(self.MW_PREFIXES):
-                mw_list.append(message)
+        logging.info(ud_list)
 
-            elif command.startswith(self.IMDB_PREFIXES):
-                imdb_list.append(message)
+        for message_dict in pending_requests:
+            message = message_dict.get("message").lower()
+
+            if message.startswith(self.UD_PREFIXES):
+                ud_list.append(message_dict)
+
+            elif message.startswith(self.MW_PREFIXES):
+                mw_list.append(message_dict)
+
+            elif message.startswith(self.IMDB_PREFIXES):
+                imdb_list.append(message_dict)
 
         ud_list.reverse()
         mw_list.reverse()
         imdb_list.reverse()
 
-        command_triggered_dict = {
-            "urban_dict": ud_list,
-            "mw_dict": mw_list,
-            "imdb": imdb_list,
-        }
+        logging.info(ud_list)
 
-        logging.info(command_triggered_dict)
-        return command_triggered_dict
+        self.ud_commands = ud_list
+        self.mw_commands = mw_list
+        self.imdb_commands = imdb_list
 
-    def respond_to_request(self, channel, response_list):
-        if not response_list:
-            return
+        logging.info(self.ud_commands)
 
-        for response in response_list:
-            self.chat.send_chat(channel, response)
-            time.sleep(10)
+        return
 
-    def run_chat_client(self, channel, interval=30, chat_stream=None):
-
-        chat_stream = self.check_chat_stream(channel, chat_stream)
-        message_list = self.check_for_messages(chat_stream)
-        triggered_list = self.check_for_triggers(message_list)
-        recent_requests_list = self.check_time_diff(triggered_list, interval)
-        new_requests = self.check_response_status(recent_requests_list)
-        filtered_requests_dict = self.filter_commands(new_requests)
-
-        if not filtered_requests_dict:
-            return
-
-        ud_client = self.UrbanDict.run_urban_dict_client(filtered_requests_dict)
-        mw_client = []
-        imdb_client = []
-
-        chat_response_list = ud_client + mw_client + imdb_client
-
-        self.respond_to_request(channel, chat_response_list)
+    ud_commands = []
+    mw_commands = []
+    imdb_commands = []
 
 
 class UrbanDict(ChatConfig):
-    ud_term_defined_list = []
 
     def __init__(self):
         """
 
         """
         super().__init__()
-        self.user = User()
 
     def __str__(self):
         """
@@ -195,16 +199,44 @@ class UrbanDict(ChatConfig):
         """
         return f"UrbanDict(host={self.HEADERS.get('X-RapidAPI-Host')}, key={self.HEADERS.get('X-RapidAPI-Key')})"
 
-    @staticmethod
-    def check_for_ud_command(requests_dict):
-        if not requests_dict.get("urban_dict"):
-            logging.info("No new urban dict requests in chat stream")
+    def run_urban_dict_client(self, ud_requests, channel, delay=30):
+
+        logging.info(f"ud_requests: {ud_requests}")
+        filtered_requests = self.filter_new_requests(ud_requests)
+        if not filtered_requests:
+            logging.info("All responses have already been sent for all requests")
             return
-        requests_list = requests_dict.get("urban_dict")
-        return requests_list
+
+        for request in filtered_requests:
+            logging.info(f"ud_requests: {request}")
+            message = request.get("message")
+            term = self.extract_term(message)
+            logging.info(f"ud_requests: {term}")
+            undefined_term = term if term not in self.defined_term_set else None
+
+            if not undefined_term:
+                logging.info(f"[{term}] has already been defined")
+                continue
+
+            defined_term = self.get_definition(term)
+            definition = self.clean_definition(defined_term)
+
+            message_id = request.get("message_id")
+            user_name = request.get("user_profile").get("name")
+
+            response = self.set_response(user_name, term, definition)
+            send = self.send_command_response(channel, response, delay)
+
+            if send:
+                self.message_responded_set.add(term)
+                self.message_responded_set.add(message_id)
+
+    def filter_new_requests(self, ud_requests):
+        filtered_requests = [_ for _ in ud_requests if _.get("message_id") not in self.message_responded_set]
+        return filtered_requests
 
     @staticmethod
-    def _extract_term(message):
+    def extract_term(message):
         term = message.split("/urban dictionary: ")
         if len(term) > 1:
             return term[1]
@@ -230,55 +262,28 @@ class UrbanDict(ChatConfig):
         if len(term) > 1:
             return term[1]
 
-    @staticmethod
-    def _append_term_to_request(request, term):
-        request["term"] = term
-        return request
-
-    def _filter_defined_terms(self, term):
-        if term not in self.ud_term_defined_list:
-            return term
-        else:
-            logging.info("Term has already been defined")
-
-    def _update_request_list(self, request_list):
-        updated_request_list = []
-        for request in request_list:
-            message = request.get("message")
-            term = self._extract_term(message)
-            term = self._filter_defined_terms(term)
-
-            if term:
-                updated_request = self._append_term_to_request(request, term)
-                updated_request_list.append(updated_request)
-
-        if updated_request_list:
-            return updated_request_list
-        else:
-            logging.info("All terms have already been defined")
-
     def get_definition(self, term):
         """
         :param term:
         :return:
         """
-        querystring = {
-            "term": term
-        }
-        req = requests.get(self.URBAN_DICT_API_URL, headers=self.RAPID_API_HEADERS, params=querystring)
-        logging.info(f"{req.status_code} {req.text}")
-        if not req:
-            return False
-        elif not req.json().get("list"):
-            return f"No definition for {term} was found on Urban Dictionary"
+        @validate_response
+        def api_request():
+            querystring = {
+                "term": term
+            }
+            req = requests.get(self.URBAN_DICT_API_URL, headers=self.RAPID_API_HEADERS, params=querystring)
+            return req
 
-        definition = req.json().get("list")[0]["definition"]
+        response = api_request()
+        if not response.get("list"):
+            return f'No definition for "{term}" was found on Urban Dictionary'
+
+        definition = response.get("list")[0]["definition"]
         return definition
 
     @staticmethod
     def clean_definition(definition):
-        if not definition:
-            return
 
         multi_line_list = []
         definition = definition.splitlines()
@@ -294,59 +299,22 @@ class UrbanDict(ChatConfig):
 
         return definition
 
-    def config_response_dict(self, pending_requests):
-        if not pending_requests:
-            return
+    @staticmethod
+    def set_response(user_name, term, definition):
 
-        pending_responses_list = []
-        for request in pending_requests:
-            message_id = request.get("message_id")
-            user_id = request.get("user_profile").get("user_id")
-            user_name = request.get("user_profile").get("name")
-            term = request.get("term")
-            defined_term = self.get_definition(term)
-            definition = self.clean_definition(defined_term)
-            request_response_dict = {
-                "message_id": message_id,
-                "user_id": user_id,
-                "user_name": user_name,
-                "term": term,
-                "definition": definition,
-            }
+        term = f"Urban Dictionary [lookup: {term}]"
+        term = fancy.bold_serif(term)
 
-            logging.info(request_response_dict)
-            pending_responses_list.append(request_response_dict)
-        return pending_responses_list
+        reply_message = f"@{user_name} {term}—{definition}"
+        logging.info(reply_message)
 
-    def response_message_list(self, response_dict):
+        return reply_message
 
-        response_list = []
-        for response in response_dict:
-            user_name = response.get("user_name")
-            term = response.get("term")
-            definition = response.get("definition")
+    message_responded_set = set()
+    defined_term_set = set()
 
-            term = f"Urban Dictionary [lookup: {term}]"
-            term = fancy.bold_serif(term)
 
-            reply_message = f"@{user_name} {term}—{definition}"
-            print(reply_message)
-            response_list.append(reply_message)
-            logging.info(reply_message)
-            self.ud_term_defined_list.append(term)
 
-        return response_list
-
-    def run_urban_dict_client(self, requests_dict):
-        ud_request_list = self.check_for_ud_command(requests_dict)
-        if not ud_request_list:
-            return []
-
-        updated_request_list = self._update_request_list(ud_request_list)
-        pending_response_dict = self.config_response_dict(updated_request_list)
-        response_list = self.response_message_list(pending_response_dict)
-
-        return response_list
 
 
 
