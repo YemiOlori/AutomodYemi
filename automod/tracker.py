@@ -3,7 +3,7 @@ tracker.py
 """
 import logging
 import json
-import datetime
+from datetime import datetime
 
 import pytz
 import boto3
