@@ -33,8 +33,8 @@ class ModClient(Clubhouse):
     def channel_init(self, channel, api_retry_interval_sec=10, thread_timeout=120,
                      announcement=None, announcement_interval_min=60, announcement_delay=None):
 
-        self.set_join_status(channel)
-        self.set_channel_status(channel)
+        join_info = self.set_join_status(channel)
+        channel_info, users_info, client_info = self.set_channel_status(channel)
         self.set_channel_init()
         self.keep_alive_thread = self.keep_alive_ping(channel)
 
@@ -62,21 +62,18 @@ class ModClient(Clubhouse):
             if self.url_announcement and not announcement:
                 announcement = self.set_url_announcement(channel)
                 announcement_interval_min = 60
-                announcement_delay = 10
+                announcement_delay = 2
 
                 self.send_room_chat(channel, announcement, announcement_delay)
 
-            if announcement:
-                self.announcement_thread = self.set_announcement(
-                    channel, announcement, announcement_interval_min, announcement_delay)
+            # time_message = self.set_timestamp_announcement()
+            # self.send_room_chat(channel, time_message)
 
-            time_message = self.set_timestamp_announcement()
-            self.send_room_chat(channel, time_message)
+        # Add Timestamp Announcement thread
 
-    # Start ChatClient
-    # Start TrackerClient
+        return join_info, channel_info, users_info, client_info
 
-    def channel_active(self, channel, message_delay=2):
+    def active_channel(self, channel, message_delay=2):
 
         users_info = self.get_users_info(channel)
         self.invite_guests(channel, users_info, message_delay)
@@ -87,7 +84,7 @@ class ModClient(Clubhouse):
 
         # Make sure ChatClient and TrackerClient are enabled
 
-    def channel_terminate(self):
+    def terminate_channel(self):
 
         if self.keep_alive_thread:
             self.keep_alive_thread.set()
@@ -235,7 +232,7 @@ class ModClient(Clubhouse):
             self.waiting_mod = True
             self.waiting_speaker = True
 
-        elif not self.active_speaker:
+        elif not self.active_mod:
             self.waiting_mod = True
             self.waiting_speaker = False
 
@@ -254,7 +251,8 @@ class ModClient(Clubhouse):
         return True
 
     def set_hello_message(self, targeted_message=None):
-        message = f"🤖 Hello {self.host_name}! I'm AutoMod! 🎉"
+        message = f"🤖 Hello {self.host_name}! I'm AutoMod! 🎉 "
+
 
         if isinstance(targeted_message, str):
             message = [message + targeted_message]
@@ -306,18 +304,20 @@ class ModClient(Clubhouse):
 
     def set_timestamp_announcement(self):
         current_time = datetime.now()
-        running_time = self.time_created - current_time
+        running_time = current_time - self.time_created
         time_string = str(running_time).split(".")[0]
-        split = time_string.split(":")
+        # split = time_string.split(":")
+        #
+        # hours = split[0]
+        # mins = split[1]
+        # secs = split[2]
 
-        hours = split[0]
-        mins = split[1]
-        secs = split[2]
+        # message = f"This room has been running for {hours} hours, {mins} minutes, and {secs} seconds."
+        #
+        # if hours != "0":
+        #     message = f"This room has been running for {mins} minutes and {secs} seconds."
 
-        message = f"This room has been running for {hours} hours, {mins} minutes, and {secs} seconds."
-
-        if hours != "0":
-            message = f"This room has been running for {mins} minutes and {secs} seconds."
+        message = f"This room has been running for {time_string}."
 
         return message
 
@@ -405,13 +405,13 @@ class ModClient(Clubhouse):
 
             for user in user_info:
                 user_id = user.get("user_id")
-                first_name = user_info.get("first_name")
-                is_speaker = user_info.get("is_speaker")
-                is_invited = user_info.get("is_invited_as_speaker")
+                first_name = user.get("first_name")
+                is_speaker = user.get("is_speaker")
+                is_invited = user.get("is_invited_as_speaker")
                 welcome_message = self.set_welcome_message(first_name, user_id)
 
                 if not is_speaker and not is_invited:
-                    self.channel.invite_speaker(channel, user_id)
+                    self.mod.invite_speaker(channel, user_id)
                     self.send_room_chat(channel, welcome_message, message_delay)
                     self.already_welcomed_set.add(user_id)
 
@@ -423,35 +423,39 @@ class ModClient(Clubhouse):
             user_id = user.get("user_id")
 
             if user_id in self.guest_list:
-                first_name = user_info.get("first_name")
-                is_speaker = user_info.get("is_speaker")
-                is_invited = user_info.get("is_invited_as_speaker")
+                first_name = user.get("first_name")
+                is_speaker = user.get("is_speaker")
+                is_invited = user.get("is_invited_as_speaker")
                 welcome_message = self.set_welcome_message(first_name, user_id)
 
                 if not is_speaker and not is_invited:
-                    self.channel.invite_speaker(channel, user_id)
-                    self.send_room_chat(channel, welcome_message, message_delay)
-                    self.already_welcomed_set.add(user_id)
+                    self.mod.invite_speaker(channel, user_id)
+                    run = self.send_room_chat(channel, welcome_message, message_delay)
+                    if run:
+                        self.already_welcomed_set.add(user_id)
 
             self.screened_for_speaker_set.add(user_id)
 
-    def mod_guests(self, channel, user_info, message_delay=2):
+    def mod_guests(self, channel, user_info, message_delay=10):
 
         if self.in_social_club:
 
             for user in user_info:
                 user_id = user.get("user_id")
-                first_name = user_info.get("first_name")
-                is_mod = user_info.get("is_moderator")
+                first_name = user.get("first_name")
+                is_speaker = user.get("is_speaker")
+                is_mod = user.get("is_moderator")
                 welcome_message = self.set_welcome_message(first_name, user_id)
 
-                if not is_mod:
+                if is_speaker and not is_mod:
+                    logging.info(f"Attempted to make {first_name} a moderator")
                     self.mod.make_moderator(channel, user_id)
 
                 # The following should probably go elsewhere
                 if user_id not in self.already_welcomed_set:
-                    self.send_room_chat(channel, welcome_message, message_delay)
-                    self.already_welcomed_set.add(user_id)
+                    run = self.send_room_chat(channel, welcome_message, message_delay)
+                    if run:
+                        self.already_welcomed_set.add(user_id)
 
         filtered_users = self.filter_screened_users(user_info, for_mod=True)
 
@@ -459,15 +463,15 @@ class ModClient(Clubhouse):
             user_id = user.get("user_id")
 
             if user_id in self.mod_list:
-                user_id = user.get("user_id")
-                first_name = user_info.get("first_name")
-                is_mod = user_info.get("is_moderator")
+                first_name = user.get("first_name")
+                is_speaker = user.get("is_speaker")
+                is_mod = user.get("is_moderator")
                 welcome_message = self.set_welcome_message(first_name, user_id)
 
-                if not is_mod:
-                    self.mod.make_moderator(channel, user_info.get("user_id"))
+                if is_speaker and not is_mod:
+                    self.mod.make_moderator(channel, user_id)
 
-                if user_id not in self.already_welcomed_set:
+                if user_id not in self.already_welcomed_set and user_id not in self.screened_user_set:
                     self.send_room_chat(channel, welcome_message, message_delay)
                     self.already_welcomed_set.add(user_id)
 
@@ -477,10 +481,10 @@ class ModClient(Clubhouse):
 
         for user in user_info:
             user_id = user.get("user_id")
-            first_name = user_info.get("first_name")
+            first_name = user.get("first_name")
             welcome_message = self.set_welcome_message(first_name, user_id)
 
-            if user_id not in self.already_welcomed_set:
+            if user_id not in self.already_welcomed_set and user_id not in self.screened_user_set:
                 self.send_room_chat(channel, welcome_message, message_delay)
                 self.already_welcomed_set.add(user_id)
 
@@ -512,9 +516,12 @@ class ModClient(Clubhouse):
     @staticmethod
     def get_host_name(join_info):
         creator_id = join_info.get("creator_user_profile_id")
-        host_name = [_.get("first_name") for _ in join_info.get("users") if _.get("user_id") == creator_id][0]
+        host_name = [_.get("first_name") for _ in join_info.get("users") if _.get("user_id") == creator_id]
 
-        if not host_name:
+        if host_name:
+            host_name = host_name[0]
+
+        else:
             host_name = join_info.get("users")[0].get("first_name")
 
         logging.info(host_name)
@@ -650,14 +657,16 @@ class ModClient(Clubhouse):
     already_welcomed_set = set()
     filtered_users_list = []
 
+
+
     url_announcement = False
     in_automod_club = False
     in_social_club = False
 
-    # waiting_ping_thread = None
+
     waiting_speaker_thread = None
     waiting_mod_thread = None
-    # active_mod_thread = None
+
     announcement_thread = None
     # music_thread = None
     welcome_thread = None
