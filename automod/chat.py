@@ -19,7 +19,11 @@ class ChatConfig(Auth):
         "X-RapidAPI-Key": Config.config_to_dict(Config.load_config(), "RapidAPI", "key")
     }
 
-    URBAN_DICT_API_URL = Config.config_to_dict(Config.load_config(), "UrbanDictionary", "api_url")
+    URBAN_DICT_URL = Config.config_to_dict(Config.load_config(), "UrbanDictionary", "url")
+
+    MW_URL = Config.config_to_dict(Config.load_config(), "MW", "url")
+    MW_KEY = Config.config_to_dict(Config.load_config(), "MW", "key")
+    MW_SPANISH_KEY = Config.config_to_dict(Config.load_config(), "MW", "spanish_key")
 
     UD_PREFIXES = ("/urban", "/ud")
     MW_PREFIXES = ("/def", "/dict")
@@ -52,6 +56,7 @@ class ChatClient(ChatConfig):
     def __init__(self):
         super().__init__()
         self.urban_dict = UrbanDict()
+        self.mw = MW()
 
     def __str__(self):
         """
@@ -272,7 +277,7 @@ class UrbanDict(ChatConfig):
             querystring = {
                 "term": term
             }
-            req = requests.get(self.URBAN_DICT_API_URL, headers=self.RAPID_API_HEADERS, params=querystring)
+            req = requests.get(self.URBAN_DICT_URL, headers=self.RAPID_API_HEADERS, params=querystring)
             return req
 
         response = api_request()
@@ -306,12 +311,32 @@ class UrbanDict(ChatConfig):
         term = fancy.bold_serif(term)
 
         reply_message = f"@{user_name} {term}—{definition}"
+        reply_message = reply_message[:300]
         logging.info(reply_message)
 
         return reply_message
 
     message_responded_set = set()
     defined_term_set = set()
+
+
+class MW(ChatConfig):
+
+    def __init__(self):
+        super().__init__()
+
+    def __str__(self):
+        pass
+
+    def get_definition(self, term):
+
+        @validate_response
+        def api_request():
+
+            req = requests.get(f"{self.MW_URL}{term}?key={self.MW_KEY}")
+            return req
+
+        return api_request()
 
 
 
