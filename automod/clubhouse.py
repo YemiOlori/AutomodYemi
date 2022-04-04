@@ -16,6 +16,8 @@ import threading
 from functools import wraps
 from configparser import ConfigParser
 
+# Need to fix login and finish authorization functions
+
 
 def requires_authentication(func):
     """ Simple decorator to check for the authentication """
@@ -39,19 +41,29 @@ def unstable_endpoint(func):
 
 
 def validate_response(func):
+
     @wraps(func)  # Is this in the right place?
     def wrap(*args, **kwargs):
-        req = func(*args, **kwargs)
-        log = f"{func.__name__} {req}"
-        if req.status_code == 200:
-            response = req.json()
-        elif req.status_code:
-            response = {"success": False}
-            log = f"{func.__name__} {req.json}"
-        else:
-            response = {"success": False}
+        response = {"success": False}
 
-        logging.info(log)
+        try:
+            req = func(*args, **kwargs)
+            req.raise_for_status()
+
+        except requests.exceptions.HTTPError as http_error:
+            logging.error(f"{func.__name__} {http_error}")
+
+        except requests.exceptions.ConnectionError as conn_error:
+            logging.error(f"{func.__name__} {conn_error}")
+
+        except requests.exceptions.Timeout as timeout_error:
+            logging.error(f"{func.__name__} {timeout_error}")
+
+        except requests.exceptions.RequestException as req_error:
+            logging.error(f"{func.__name__} {req_error} ")
+
+        else:
+            response = req.json()
 
         return response
 
@@ -123,6 +135,22 @@ class Config:
         }
         logging.info("Reload client successful")
         return reload_dict
+
+    @staticmethod
+    def write_config(user_id, user_token, user_device, filename='/Users/deon/Documents/GitHub/HQ/setting.ini'):
+        """ (str, str, str, str) -> bool
+
+        Write Config. return True on successful file write
+        """
+        config_object = ConfigParser()
+        config_object["Account"] = {
+            "user_device": user_device,
+            "user_id": user_id,
+            "user_token": user_token,
+        }
+        with open(filename, 'w') as config_file:
+            config.write(config_file)
+        return True
 
 
 class Auth(Config):
@@ -260,7 +288,7 @@ class Auth(Config):
         return req
 
     @validate_response
-    def complete_auth(self, phone_number, rc_token, verification_code):
+    def complete_auth(self, phone_number, verification_code, rc_token=None):
         """ (Clubhouse, str, str, str) -> dict
 
         Complete phone number authentication.
@@ -268,8 +296,8 @@ class Auth(Config):
         This should return `auth_token`, `access_token`, `refresh_token`, is_waitlisted, ...
         Please note that output may be different depending on the status of the authenticated user
         """
-        if self.HEADERS.get("Authorization"):
-            raise Exception('Already Authenticated')
+        # if self.HEADERS.get("Authorization"):
+        #     raise Exception('Already Authenticated')
         data = {
             "device_token": None,
             "rc_token": rc_token,
@@ -1076,7 +1104,7 @@ class ChannelMod(Auth):
         return req
 
     @validate_response
-    def uninvite_speaker(self, channel, user_id):
+    def invite_speaker(self, channel, user_id):
         """ (Clubhouse, str, int) -> dict
 
         Move audience to speaker. Requires moderator privilege.
@@ -1089,7 +1117,7 @@ class ChannelMod(Auth):
         return req
 
     @validate_response
-    def move_speaker(self, channel, user_id):
+    def uninvite_speaker(self, channel, user_id):
         """ (Clubhouse, str, int) -> dict
 
         Move speaker to audience. Requires moderator privilege.
