@@ -18,10 +18,6 @@ class AutoModClient(Mod, Chat, Audio):
             self, channel, api_retry_interval_sec=10, thread_timeout=120,
             announcement=None, announcement_interval_min=60, announcement_delay=None):
 
-        # Start ChatClient
-        # Start TrackerClient
-        # Add Timestamp Announcement
-
         join_info, channel_info, users_info, client_info = self.channel_init(
             channel, api_retry_interval_sec, thread_timeout,
             announcement, announcement_interval_min, announcement_delay)
@@ -33,7 +29,7 @@ class AutoModClient(Mod, Chat, Audio):
 
 
     @set_interval(30)
-    def init_chat_client(self, channel, response_interval=120, delay=10):
+    def init_chat_client(self, channel, response_interval=300, delay=10):
         self.run_chat_client(channel, response_interval, delay)
         return True
 
