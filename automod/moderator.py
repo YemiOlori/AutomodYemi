@@ -99,6 +99,7 @@ class ModClient(Clubhouse, Tracker):
         users_info = self.get_users_info(channel_info, channel_info=True)
         client_info = self.get_client_info(users_info, user_info=True)
 
+        self.active_channel = True if channel_info.get("success") else False
         self.chat_enabled = self.get_chat_enabled(channel_info)
         self.filtered_users_list = self.filter_screened_users(users_info)
         # self.screened_user_set = self.update_screened_users()
@@ -185,8 +186,14 @@ class ModClient(Clubhouse, Tracker):
         return True
 
     def refresh_channel_status(self, channel):
+
         channel_info = self.get_channel_info(channel)
+
         if not channel_info:
+            self.active_channel = False
+            return None, None, None
+
+        if not channel_info.get("success"):
             self.active_channel = False
             return None, None, None
 
@@ -298,6 +305,11 @@ class ModClient(Clubhouse, Tracker):
             client_info = [_ for _ in user_info if _.get("user_id") == self.client_id][0]
             speaker_status = client_info.get("is_speaker")
 
+        if speaker_status:
+            self.granted_speaker = True
+            self.active_speaker = True
+            self.waiting_speaker = False
+
         return speaker_status
 
     def request_to_speak(self, channel):
@@ -356,6 +368,11 @@ class ModClient(Clubhouse, Tracker):
             client_info = [_ for _ in user_info if _.get("user_id") == self.client_id][0]
             mod_status = client_info.get("is_moderator")
 
+        if mod_status:
+            self.granted_mod = True
+            self.active_mod = True
+            self.waiting_mod = False
+
         return mod_status
 
     def wait_for_mod(self, channel, interval=10, timeout=120):
@@ -409,9 +426,8 @@ class ModClient(Clubhouse, Tracker):
         return host_name
 
     def set_hello_message(self, targeted_message=None):
-        host_name = self.host_info.get("name")
-        message = f"🤖 Hello {host_name}! I'm AutoMod! 🎉 "
 
+        message = f"🤖 Hello {self.host_name}! I'm AutoMod! 🎉 "
 
         if isinstance(targeted_message, str):
             message = [message + targeted_message]
@@ -610,7 +626,7 @@ class ModClient(Clubhouse, Tracker):
         else:
             host_info = join_info.get("users")[0]
 
-        earliest_speaker = [_ for _ in join_info.get("users") if not _.get("is_moderator")]
+        earliest_speaker = [_ for _ in join_info.get("users") if _.get("is_speaker") and not _.get("is_moderator")]
         if earliest_speaker:
             earliest_speaker = earliest_speaker[0]
         else:
@@ -625,13 +641,18 @@ class ModClient(Clubhouse, Tracker):
         logging.info(earliest_recorded_time)
         return earliest_recorded_time
 
-    def set_runtime_announcement(self, channel, interval=30, delay=2):
-        current_time = pytz.timezone('US/Central').localize(datetime.now())
+    def set_runtime_message(self):
+        current_time = datetime.now(tz=pytz.UTC)
         running_time = current_time - self.time_created
         time_string = str(running_time).split(".")[0]
 
         message = f"This room has been running for {time_string}."
         logging.info(message)
+
+        return message
+
+    def set_runtime_announcement(self, channel, interval=30, delay=2):
+        message = self.set_runtime_message()
 
         self.send_room_chat(channel, message, delay)
 
