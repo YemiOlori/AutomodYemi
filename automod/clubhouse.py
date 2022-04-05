@@ -49,7 +49,6 @@ def validate_response(func):
         try:
             req = func(*args, **kwargs)
             req.raise_for_status()
-
         except requests.exceptions.HTTPError as http_error:
             logging.error(f"{func.__name__} {http_error}")
 
@@ -60,7 +59,10 @@ def validate_response(func):
             logging.error(f"{func.__name__} {timeout_error}")
 
         except requests.exceptions.RequestException as req_error:
-            logging.error(f"{func.__name__} {req_error} ")
+            logging.error(f"{func.__name__} {req_error}")
+
+        except KeyError as key_error:
+            logging.error(f"{func.__name__} {key_error}")
 
         else:
             response = req.json()
@@ -149,7 +151,7 @@ class Config:
             "user_token": user_token,
         }
         with open(filename, 'w') as config_file:
-            config.write(config_file)
+            config_object.write(config_file)
         return True
 
 
@@ -251,9 +253,9 @@ class Auth(Config):
         Some examples for the phone number.
 
         >>> clubhouse = Auth()
-        >>> clubhouse.start_phone_number_auth("+821012341337")
+        >>> clubhouse.start_auth("+821012341337")
         ...
-        >>> clubhouse.start_phone_number_auth("+818013371221")
+        >>> clubhouse.start_auth("+818013371221")
         ...
         """
         if self.HEADERS.get("Authorization"):
@@ -614,8 +616,8 @@ class Client(Auth):
 
         Change Twitter username based on Twitter Token.
 
-        >>> client.update_twitter_username(None, None, None) # Clear username
-        >>> client.update_twitter_username("stereotype32", "...", "...") # Set username
+        >>> self.update_twitter_username(None, None, None) # Clear username
+        >>> self.update_twitter_username("stereotype32", "...", "...") # Set username
         """
         data = {
             "username": username,
@@ -631,8 +633,8 @@ class Client(Auth):
 
         Change Twitter username based on Instagram token.
 
-        >>> client.update_instagram_username(None) # Clear username
-        >>> client.update_instagram_username("...") # Set username
+        >>> self.update_instagram_username(None) # Clear username
+        >>> self.update_instagram_username("...") # Set username
         """
         data = {
             "code": code
