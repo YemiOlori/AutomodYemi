@@ -26,7 +26,7 @@ class ChatConfig(Auth):
     MW_SPANISH_KEY = Config.config_to_dict(Config.load_config(), "MW", "spanish_key")
 
     UD_PREFIXES = ("/urban", "/ud")
-    MW_PREFIXES = ("/def", "/dict")
+    MW_PREFIXES = ("/def", "/dict", "/mw")
     IMDB_PREFIXES = ("/imdb", "/IMDB")
 
     def __init__(self):
@@ -93,13 +93,11 @@ class ChatClient(ChatConfig):
             self.urban_dict.run_urban_dict_client(self.ud_commands, channel, delay)
 
         if self.mw_commands:
-            pass
+            logging.info(self.mw_commands)
+            self.mw.run_mw_dict_client(self.mw_commands, channel, delay)
 
         if self.imdb_commands:
             pass
-
-        mw_client = []
-        imdb_client = []
 
         return True
 
@@ -175,7 +173,7 @@ class ChatClient(ChatConfig):
         mw_list.reverse()
         imdb_list.reverse()
 
-        logging.info(ud_list)
+        logging.info(f"ud_commands: {ud_list}; mw_commands: {mw_list}; imdb_commands: {imdb_list}")
 
         self.ud_commands = ud_list
         self.mw_commands = mw_list
@@ -206,10 +204,9 @@ class UrbanDict(ChatConfig):
 
     def run_urban_dict_client(self, ud_requests, channel, delay=30):
 
-        logging.info(f"ud_requests: {ud_requests}")
         filtered_requests = self.filter_new_requests(ud_requests)
         if not filtered_requests:
-            logging.info("All responses have already been sent for all requests")
+            logging.info("Responses have already been sent for all ud requests")
             return
 
         for request in filtered_requests:
@@ -217,7 +214,7 @@ class UrbanDict(ChatConfig):
             message = request.get("message")
             term = self.extract_term(message)
             logging.info(f"ud_requests: {term}")
-            undefined_term = term if term not in self.defined_term_set else None
+            undefined_term = term if term not in self.ud_defined_term_set else None
 
             if not undefined_term:
                 logging.info(f"[{term}] has already been defined")
@@ -233,11 +230,11 @@ class UrbanDict(ChatConfig):
             send = self.send_command_response(channel, response, delay)
 
             if send:
-                self.message_responded_set.add(term)
-                self.message_responded_set.add(message_id)
+                self.ud_defined_term_set.add(term)
+                self.ud_message_responded_set.add(message_id)
 
     def filter_new_requests(self, ud_requests):
-        filtered_requests = [_ for _ in ud_requests if _.get("message_id") not in self.message_responded_set]
+        filtered_requests = [_ for _ in ud_requests if _.get("message_id") not in self.ud_message_responded_set]
         return filtered_requests
 
     @staticmethod
@@ -252,6 +249,9 @@ class UrbanDict(ChatConfig):
         if len(term) > 1:
             return term[1]
         term = message.split("/urban dict: ")
+        if len(term) > 1:
+            return term[1]
+        term = message.split("/urban dict:")
         if len(term) > 1:
             return term[1]
         term = message.split("/urban dict ")
@@ -307,17 +307,19 @@ class UrbanDict(ChatConfig):
     @staticmethod
     def set_response(user_name, term, definition):
 
-        term = f"Urban Dictionary [lookup: {term}]"
+        term = f"Urban Dictionary [{term}]"
         term = fancy.bold_serif(term)
 
         reply_message = f"@{user_name} {term}—{definition}"
-        reply_message = reply_message[:300]
-        logging.info(reply_message)
 
+        if len(reply_message) > 250:
+            reply_message = reply_message[:250].rsplit(".", 1)[0] + "."
+
+        logging.info(reply_message)
         return reply_message
 
-    message_responded_set = set()
-    defined_term_set = set()
+    ud_message_responded_set = set()
+    ud_defined_term_set = set()
 
 
 class MW(ChatConfig):
@@ -328,6 +330,98 @@ class MW(ChatConfig):
     def __str__(self):
         pass
 
+    def run_mw_dict_client(self, mw_requests, channel, delay=30):
+
+        filtered_requests = self.filter_new_requests(mw_requests)
+        if not filtered_requests:
+            logging.info("Responses have already been sent for all mw requests")
+            return
+
+        for request in filtered_requests:
+            logging.info(f"mw_requests: {request}")
+            message = request.get("message")
+            term = self.extract_term(message)
+            logging.info(f"mw_requests: {term}")
+            undefined_term = term if term not in self.mw_defined_term_set else None
+
+            if not undefined_term:
+                logging.info(f"[{term}] has already been defined")
+                continue
+
+            defined_term = self.get_definition(term)
+            definition = self.clean_definition(defined_term)
+
+            message_id = request.get("message_id")
+            user_name = request.get("user_profile").get("name")
+
+            response = self.set_response(user_name, term, definition)
+            send = self.send_command_response(channel, response, delay)
+
+            if send:
+                self.mw_defined_term_set.add(term)
+                self.mw_message_responded_set.add(message_id)
+
+    def filter_new_requests(self, mw_requests):
+        filtered_requests = [_ for _ in mw_requests if _.get("message_id") not in self.mw_message_responded_set]
+        return filtered_requests
+
+    @staticmethod
+    def extract_term(message):
+        term = message.split("/definition: ")
+        if len(term) > 1:
+            return term[1]
+        term = message.split("/definition:")
+        if len(term) > 1:
+            return term[1]
+        term = message.split("/definition ")
+        if len(term) > 1:
+            return term[1]
+        term = message.split("/define: ")
+        if len(term) > 1:
+            return term[1]
+        term = message.split("/define:")
+        if len(term) > 1:
+            return term[1]
+        term = message.split("/define ")
+        if len(term) > 1:
+            return term[1]
+        term = message.split("/def: ")
+        if len(term) > 1:
+            return term[1]
+        term = message.split("/def:")
+        if len(term) > 1:
+            return term[1]
+        term = message.split("/def ")
+        if len(term) > 1:
+            return term[1]
+        term = message.split("/dictionary: ")
+        if len(term) > 1:
+            return term[1]
+        term = message.split("/dictionary:")
+        if len(term) > 1:
+            return term[1]
+        term = message.split("/dictionary ")
+        if len(term) > 1:
+            return term[1]
+        term = message.split("/dict: ")
+        if len(term) > 1:
+            return term[1]
+        term = message.split("/dict:")
+        if len(term) > 1:
+            return term[1]
+        term = message.split("/dict ")
+        if len(term) > 1:
+            return term[1]
+        term = message.split("/mw: ")
+        if len(term) > 1:
+            return term[1]
+        term = message.split("/mw:")
+        if len(term) > 1:
+            return term[1]
+        term = message.split("/mw ")
+        if len(term) > 1:
+            return term[1]
+
     def get_definition(self, term):
 
         @validate_response
@@ -337,6 +431,182 @@ class MW(ChatConfig):
             return req
 
         return api_request()
+
+    @staticmethod
+    def clean_definition(definition):
+
+        defined = "Sorry, something happened. Please try again."
+
+        if isinstance(definition[0], dict):
+            defined = [_.get("shortdef") for _ in definition][0]
+            logging.info(defined)
+            if defined:
+                defined = defined[0]
+
+        elif isinstance(definition, list):
+            definition = definition
+            word_list = ", ".join(definition[:5])
+            defined = f"Sorry, I couldn't define your word. \
+                      You may want to try again with one of the following: {word_list}, or {definition[6]}."
+            logging.info(defined)
+
+        logging.info(f"{defined}")
+
+        return defined
+
+    @staticmethod
+    def set_response(user_name, term, definition):
+
+        term = f"Merriam-Webster Dictionary [{term}]"
+        term = fancy.bold_serif(term)
+
+        reply_message = f"@{user_name} {term}—{definition}"
+
+        if len(reply_message) > 250:
+            reply_message = reply_message[:250].rsplit(".", 1)[0] + "."
+
+        logging.info(reply_message)
+        return reply_message
+
+    mw_message_responded_set = set()
+    mw_defined_term_set = set()
+
+
+class ESPN(ChatConfig):
+
+
+    def live_game(self):
+        # date = result.get("eventsDate").get("day").get("date")
+        events = ncaa_result.get("events")
+
+        event_0 = events[0]
+        event_0_status = event_0.get("status").get("type").get("detail")
+        event_0_name = event_0.get("name")
+        event_0_short_name = event_0.get("shortName")
+        # event_0_line =  event_0.get("competitions")[0].get("odds")[0].get("details")
+        # event_0_over_under = event_0.get("competitions")[0].get("odds")[0].get("overUnder")
+
+        team_0 = event_0.get("competitions")[0].get("competitors")[0]
+        team_0_home_away = team_0.get("homeAway")
+        team_0_display_name = team_0.get("team").get("displayName")
+        team_0_short_display_name = team_0.get("team").get("shortDisplayName")
+        team_0_abbr = team_0.get("team").get("abbreviation")
+        team_0_score = team_0.get("score")
+
+        team_0_season_stats = team_0.get("statistics")
+        stat_avgs = [stat for stat in team_0_season_stats if stat.get("name").startswith("avg")]
+        stat_pct = [stat for stat in team_0_season_stats if stat.get("name").endswith("Pct")]
+        team_0_season_avgs = stat_avgs + stat_pct
+
+        team_0_avgs = []
+        for stat in team_0_season_avgs:
+            stat_cat = stat.get("abbreviation")
+            stat_value = stat.get("displayValue")
+            stat_rank = stat.get("rankDisplayValue")
+
+            stat_line = f"{stat_cat}: {stat_value} [{stat_rank}]"
+            team_0_avgs.append(stat_line)
+
+        team_0_stat_line = ", ".join(team_0_avgs)
+
+        team_1 = event_0.get("competitions")[0].get("competitors")[1]
+        team_1_home_away = team_1.get("homeAway")
+        team_1_display_name = team_1.get("team").get("displayName")
+        team_1_short_display_name = team_1.get("team").get("shortDisplayName")
+        team_1_abbr = team_1.get("team").get("abbreviation")
+        team_1_score = team_1.get("score")
+
+        team_1_season_stats = team_1.get("statistics")
+        stat_avgs = [stat for stat in team_1_season_stats if stat.get("name").startswith("avg")]
+        stat_pct = [stat for stat in team_1_season_stats if stat.get("name").endswith("Pct")]
+        team_1_season_avgs = stat_avgs + stat_pct
+
+        team_1_avgs = []
+        for stat in team_1_season_avgs:
+            stat_cat = stat.get("abbreviation")
+            stat_value = stat.get("displayValue")
+            stat_rank = stat.get("rankDisplayValue")
+
+            stat_line = f"{stat_cat}: {stat_value} [{stat_rank}]"
+            team_1_avgs.append(stat_line)
+
+        team_1_stat_line = ", ".join(team_1_avgs)
+
+        if team_0_home_away == "home":
+            response = f"{team_1_abbr} {team_1_score} | {team_0_abbr} {team_0_score} | {event_0_status}"
+
+        else:
+            response = f"{team_0_abbr} {team_0_score} | {team_1_abbr} {team_1_score} | {event_0_status}"
+
+        return response
+
+    def pre_game(self):
+
+        # date = result.get("eventsDate").get("day").get("date")
+        events = nba_result.get("events")
+
+        event_0 = events[0]
+        event_0_date = event_0.get("status").get("type").get("detail")
+        event_0_name = event_0.get("name")
+        event_0_short_name = event_0.get("shortName")
+        event_0_line = event_0.get("competitions")[0].get("odds")[0].get("details")
+        event_0_over_under = event_0.get("competitions")[0].get("odds")[0].get("overUnder")
+
+        team_0 = event_0.get("competitions")[0].get("competitors")[0]
+        team_0_home_away = team_0.get("homeAway")
+        team_0_display_name = team_0.get("team").get("displayName")
+        team_0_short_display_name = team_0.get("team").get("shortDisplayName")
+        team_0_abbr = team_0.get("team").get("abbreviation")
+        team_0_record = team_0.get("records")[0].get("summary")
+
+        team_0_season_stats = team_0.get("statistics")
+        stat_avgs = [stat for stat in team_0_season_stats if stat.get("name").startswith("avg")]
+        stat_pct = [stat for stat in team_0_season_stats if stat.get("name").endswith("Pct")]
+        team_0_season_avgs = stat_avgs + stat_pct
+
+        team_0_avgs = []
+        for stat in team_0_season_avgs:
+            stat_cat = stat.get("abbreviation")
+            stat_value = stat.get("displayValue")
+            stat_rank = stat.get("rankDisplayValue")
+
+            stat_line = f"{stat_cat}: {stat_value} [{stat_rank}]"
+            team_0_avgs.append(stat_line)
+
+        team_0_stat_line = ", ".join(team_0_avgs)
+
+        team_1 = event_0.get("competitions")[0].get("competitors")[1]
+        team_1_home_away = team_1.get("homeAway")
+        team_1_display_name = team_1.get("team").get("displayName")
+        team_1_short_display_name = team_1.get("team").get("shortDisplayName")
+        team_1_abbr = team_1.get("team").get("abbreviation")
+        team_1_record = team_1.get("records")[0].get("summary")
+
+        team_1_season_stats = team_1.get("statistics")
+        stat_avgs = [stat for stat in team_1_season_stats if stat.get("name").startswith("avg")]
+        stat_pct = [stat for stat in team_1_season_stats if stat.get("name").endswith("Pct")]
+        team_1_season_avgs = stat_avgs + stat_pct
+
+        team_1_avgs = []
+        for stat in team_1_season_avgs:
+            stat_cat = stat.get("abbreviation")
+            stat_value = stat.get("displayValue")
+            stat_rank = stat.get("rankDisplayValue")
+
+            stat_line = f"{stat_cat}: {stat_value} [{stat_rank}]"
+            team_1_avgs.append(stat_line)
+
+        team_1_stat_line = ", ".join(team_1_avgs)
+
+        if team_0_home_away == "home":
+            response = f"{team_1_display_name} [{team_1_record}] @ {team_0_display_name} [{team_0_record}] | \
+                       {event_0_date} | {event_0_line} | O/U {event_0_over_under}"
+
+        else:
+            response = f"{team_0_display_name} [{team_0_record}] @ {team_1_display_name} [{team_1_record}] |  \
+                       {event_0_date} | {event_0_line} | O/U {event_0_over_under}"
+
+        return response
 
 
 
