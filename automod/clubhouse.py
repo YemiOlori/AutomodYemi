@@ -46,11 +46,17 @@ def validate_response(func):
     def wrap(*args, **kwargs):
         response = {"success": False}
 
+        req = func(*args, **kwargs)
+
         try:
-            req = func(*args, **kwargs)
             req.raise_for_status()
+
         except requests.exceptions.HTTPError as http_error:
             logging.error(f"{func.__name__} {http_error}")
+
+            if req.json().get("success") is False:
+                logging.error(req.text)
+                return req.json()
 
         except requests.exceptions.ConnectionError as conn_error:
             logging.error(f"{func.__name__} {conn_error}")
@@ -60,6 +66,8 @@ def validate_response(func):
 
         except requests.exceptions.RequestException as req_error:
             logging.error(f"{func.__name__} {req_error}")
+            print("req")
+            return req.json()
 
         except KeyError as key_error:
             logging.error(f"{func.__name__} {key_error}")
@@ -87,12 +95,18 @@ class Config:
             raise Exception(f"Error in fetching config in read_config method. {section} not found in config file.")
 
     @staticmethod
-    def config_to_dict(config_object, section, item=None):
+    def config_to_dict(config_object, section, item=None, num=False):
         Config.section_key_exception(config_object, section)
         config_section = dict(config_object[section])
+
         if not item:
             return config_section
+
         config_item = config_section[item]
+
+        if num:
+            config_item = int(config_item)
+
         # Return None if section does not exist
         return config_item
 
@@ -991,7 +1005,7 @@ class Channel(Auth):
         return req
 
     @validate_response
-    def create_channel(self, topic="", user_ids=(), is_private=False, is_social_mode=False):
+    def create_channel(self, topic="", user_ids=(), club_id=None, is_private=False, is_social_mode=False, event_id=None):
         """ (Clubhouse, str, list, bool, bool) -> dict
 
         Create a new channel. Type of the room can be changed
@@ -999,9 +1013,9 @@ class Channel(Auth):
         data = {
             "is_social_mode": is_social_mode,
             "is_private": is_private,
-            "club_id": None,
+            "club_id": club_id,
             "user_ids": user_ids,
-            "event_id": None,
+            "event_id": event_id,
             "topic": topic
         }
         req = requests.post(f"{self.API_URL}/create_channel", headers=self.HEADERS, json=data)
