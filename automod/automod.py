@@ -13,6 +13,10 @@ from .tracker import Tracker
 set_interval = Mod.set_interval
 
 
+def run_automod_client(interval=300):
+    AutoModClient().run_automod(interval)
+
+
 # noinspection DuplicatedCode
 class AutoModClient(Mod, Chat, Audio, Tracker):
 
