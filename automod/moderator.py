@@ -11,13 +11,13 @@ import pytz
 
 from .clubhouse import Config
 from .clubhouse import Clubhouse
-from .tracker import Tracker
+
 
 set_interval = Clubhouse.set_interval
 
 
 # noinspection DuplicatedCode
-class ModClient(Clubhouse, Tracker):
+class ModClient(Clubhouse):
     # Should I add phone number and verification code to __init__?
     # Add pickling to save data in case client refreshes before channel ends
     def __init__(self):
@@ -32,30 +32,40 @@ class ModClient(Clubhouse, Tracker):
             announcement=None, announcement_interval_min=60, announcement_delay=None):
 
         join_info = self.set_join_status(channel)
-        channel_info, users_info, client_info = self.set_channel_status(channel)
+        if not join_info:
+            logging.info(f"Did not successfully join channel: {channel}")
+            return
+
+        if not join_info.get("success"):
+            return join_info
+
+        channel_status = self.set_channel_status(channel)
+        if not channel_status:
+            logging.info(f"Did not successfully get channel info: {channel}")
+            return
 
         self.set_channel_init()
 
         self.keep_alive_thread = self.keep_alive_ping(channel)
 
         if self.chat_enabled:
-            targeted_message = self.set_targeted_message()
-            hello_message = self.set_hello_message(targeted_message)
-            self.send_room_chat(channel, hello_message, delay=5)
+            self.send_hello_message(channel)
 
         if self.waiting_speaker:
             is_speaker = self.wait_to_speak(channel, api_retry_interval_sec, thread_timeout)
 
             if not is_speaker:
+                logging.info("Client was not invited as speaker")
                 self.terminate_channel(channel)
-                return
+                return False
 
         if self.waiting_mod:
             is_mod = self.wait_for_mod(channel, api_retry_interval_sec, thread_timeout)
 
             if not is_mod:
+                logging.info("Client was not given moderator privileges")
                 self.terminate_channel(channel)
-                return
+                return False
 
         if self.chat_enabled:
             if self.url_announcement:
@@ -67,11 +77,7 @@ class ModClient(Clubhouse, Tracker):
                 self.announcement_thread = self.set_announcement(
                     channel, announcement, announcement_interval_min, announcement_delay)
 
-        if self.channel_type == "public":
-            self.data_dump(join_info, "join")
-            self.data_dump(channel_info, "channel")
-
-        return join_info, channel_info, users_info, client_info
+        return join_info
 
     def get_join_info(self, channel):
         join_info = self.channel.join_channel(channel)
@@ -79,6 +85,10 @@ class ModClient(Clubhouse, Tracker):
 
     def set_join_status(self, channel):
         join_info = self.get_join_info(channel)
+
+        if not join_info.get("success"):
+            return join_info
+
         self.channel_type = self.get_channel_type(join_info)
         self.host_name = self.get_host_name(join_info)
         self.club_id = self.get_club(join_info)
@@ -96,10 +106,14 @@ class ModClient(Clubhouse, Tracker):
 
     def set_channel_status(self, channel):
         channel_info = self.get_channel_info(channel)
+
+        if not channel_info.get("success"):
+            self.channel_active = False
+            return
+
         users_info = self.get_users_info(channel_info, channel_info=True)
         client_info = self.get_client_info(users_info, user_info=True)
-
-        self.active_channel = True if channel_info.get("success") else False
+        self.channel_active = True
         self.chat_enabled = self.get_chat_enabled(channel_info)
         self.filtered_users_list = self.filter_screened_users(users_info)
         # self.screened_user_set = self.update_screened_users()
@@ -133,14 +147,12 @@ class ModClient(Clubhouse, Tracker):
 
         return True
 
-    @set_interval(15)
-    def run_active_channel(
-            self, channel, message_delay=2, reconnect_interval=10, reconnect_timeout=120,
-            dump_interval=8):
+    def active_channel(
+            self, channel, message_delay=2, reconnect_interval=10, reconnect_timeout=120):
 
         channel_info, users_info, client_info = self.refresh_channel_status(channel)
 
-        if not self.active_channel:
+        if not self.channel_active:
             is_active = self.wait_for_reconnection(channel, reconnect_interval, reconnect_timeout)
 
             if not is_active:
@@ -161,24 +173,13 @@ class ModClient(Clubhouse, Tracker):
                 self.terminate_channel(channel)
                 return
 
-        if self.channel_type != "public":
+        if self.channel_type != "public" or self.club_id == self.wwsl_club:
             self.welcome_guests(channel, users_info, message_delay)
 
         self.invite_guests(channel, users_info, message_delay)
         self.mod_guests(channel, users_info, message_delay)
 
-        if self.s3_dump_counter == dump_interval:
-            self.s3_dump_counter = 0
-
-            feed_info = self.client.feed()
-            self.data_dump(feed_info, "feed")
-
-            if self.channel_type == "public":
-                self.data_dump(channel_info, "channel")
-
-        self.s3_dump_counter += 1
-
-        return True
+        return channel_info
 
     @set_interval(30)
     def keep_alive_ping(self, channel):
@@ -190,11 +191,11 @@ class ModClient(Clubhouse, Tracker):
         channel_info = self.get_channel_info(channel)
 
         if not channel_info:
-            self.active_channel = False
+            self.channel_active = False
             return None, None, None
 
         if not channel_info.get("success"):
-            self.active_channel = False
+            self.channel_active = False
             return None, None, None
 
         users_info = self.get_users_info(channel_info, channel_info=True)
@@ -206,28 +207,38 @@ class ModClient(Clubhouse, Tracker):
 
         return channel_info, users_info, client_info
 
-    def wait_for_reconnection(self, channel, interval=10, timeout=120):
+    def wait_for_reconnection(self, channel, interval=20, timeout=120):
 
         active_channel_status = threading.Event()
         self.waiting_reconnect_thread = threading.Thread(
-            target=self.recheck_speaker_status, args=(channel, interval, active_channel_status))
+            target=self.recheck_connection_status, args=(channel, interval, active_channel_status))
 
         self.waiting_reconnect_thread.daemon = True
         self.waiting_reconnect_thread.start()
         logging.info(f"Stopped: {self.waiting_reconnect_thread}")
-        self.waiting_speaker_thread.join(timeout)
+        self.waiting_reconnect_thread.join(timeout)
         logging.info(f"Joined: {self.waiting_reconnect_thread}")
 
-        return True if self.active_channel else False
+        return True if self.channel_active else False
 
     def recheck_connection_status(self, channel, interval, active_channel_status):
 
         while not active_channel_status.isSet():
             join = self.channel.join_channel(channel)
             if join:
-                self.active_channel = True
+                if join.get("success"):
+                    self.channel_active = True
 
-            if self.active_channel:
+                elif join.get("success") is False:
+                    logging.info(join)
+
+                    error_message = join.get("error_message")
+                    if "That room is no longer available" in error_message:
+                        active_channel_status.set()
+                        logging.info("Channel is closed")
+                        logging.info(f"Stopped: {self.waiting_reconnect_thread}")
+
+            if self.channel_active:
                 active_channel_status.set()
                 logging.info(f"Stopped: {self.waiting_reconnect_thread}")
             else:
@@ -328,6 +339,8 @@ class ModClient(Clubhouse, Tracker):
         logging.info(f"Stopped: {self.waiting_speaker_thread}")
         self.waiting_speaker_thread.join(timeout)
         logging.info(f"Joined: {self.waiting_speaker_thread}")
+        active_speaker_status.set()
+        logging.info(f"Timeout: {self.waiting_speaker_thread}")
 
         return True if self.active_speaker else False
 
@@ -386,6 +399,8 @@ class ModClient(Clubhouse, Tracker):
         logging.info(f"Started: {self.waiting_mod_thread}")
         self.waiting_mod_thread.join(timeout)
         logging.info(f"Joined: {self.waiting_mod_thread}")
+        active_mod_status.set()
+        logging.info(f"Timeout: {self.waiting_mod_thread}")
 
         return True if self.active_mod else False
 
@@ -408,8 +423,54 @@ class ModClient(Clubhouse, Tracker):
     @staticmethod
     def get_chat_enabled(join_or_channel_info):
         chat_enabled = join_or_channel_info.get("is_chat_enabled")
-        logging.info(chat_enabled)
         return chat_enabled
+
+    def send_room_chat(self, channel, message, delay=10):
+        response = False
+
+        if isinstance(message, str):
+            message = [message]
+
+        for _ in message:
+            run = self.chat.send_chat(channel, _)
+            response = run.get("success")
+            time.sleep(delay)
+
+        return response
+
+    def set_hello_message(self, targeted_message=None):
+
+        message = f"🤖 Hello {self.host_name}! I'm AutoMod! 🎉 "
+        message_alt = f"🤖 Hey {self.host_name}! AutoMod, here! 🎉 "
+
+        if isinstance(targeted_message, str):
+            message = [message + targeted_message]
+
+        elif isinstance(targeted_message, list):
+            message = [message] + targeted_message
+
+        if isinstance(targeted_message, tuple):
+            message = message + targeted_message[0]
+            logging.info(f"Hello message: {message}")
+            message_alt = message_alt + targeted_message[1]
+            logging.info(f"Alt message: {message_alt}")
+            return message, message_alt
+
+        return message
+
+    def send_hello_message(self, channel):
+        targeted_message = self.set_targeted_message()
+        hello_message, hello_message_alt = self.set_hello_message(targeted_message)
+        send = self.chat.send_chat(channel, hello_message)
+
+        if send.get("success") is False:
+            error_message = send.get("error_message")
+
+            if "something like that" in error_message:
+                send = self.chat.send_chat(channel, hello_message_alt)
+
+                logging.info("Sent alternate hello message")
+                logging.info(send)
 
     @staticmethod
     def get_host_name(join_info):
@@ -424,18 +485,6 @@ class ModClient(Clubhouse, Tracker):
 
         logging.info(host_name)
         return host_name
-
-    def set_hello_message(self, targeted_message=None):
-
-        message = f"🤖 Hello {self.host_name}! I'm AutoMod! 🎉 "
-
-        if isinstance(targeted_message, str):
-            message = [message + targeted_message]
-
-        elif isinstance(targeted_message, list):
-            message = [message] + targeted_message
-
-        return message
 
     def set_targeted_message(self):
 
@@ -453,33 +502,28 @@ class ModClient(Clubhouse, Tracker):
 
         return targeted_message
 
-    def send_room_chat(self, channel, message, delay=10):
-        response = False
 
-        if isinstance(message, str):
-            message = [message]
 
-        for _ in message:
-            run = self.chat.send_chat(channel, _)
-            response = run.get("success")
-            time.sleep(delay)
 
-        return response
+
 
     @staticmethod
     def request_speak_and_mod_message():
-        message = "If you'd like to use my features, please invite me to speak and make me a Moderator. ✳️"
-        return message
+        message_1 = "If you'd like to use my features, please invite me to speak and make me a Moderator. ✳️"
+        message_2 = "✳️ Please invite me to speak and make me a Moderator if you'd like to use my features!"
+        return message_1, message_2
 
     @staticmethod
     def request_mod_message():
-        message = "If you'd like to use my features, please make me a Moderator. ✳️"
-        return message
+        message_1 = "If you'd like to use my features, please make me a Moderator. ✳️"
+        message_2 = "✳️ Please make me a Moderator if you'd like to use my features!️"
+        return message_1, message_2
 
     @staticmethod
     def request_speak_message():
-        message = "If you'd like to hear music, please invite me to speak. 🎶"
-        return message
+        message_1 = "If you'd like to hear music, please invite me to speak. 🎶"
+        message_2 = "Please invite me to speak if you'd like to hear music!"
+        return message_1, message_2
 
     @staticmethod
     def set_welcome_message(first_name, user_id):
@@ -511,8 +555,10 @@ class ModClient(Clubhouse, Tracker):
             welcome_message = self.set_welcome_message(first_name, user_id)
 
             if user_id not in self.already_welcomed_set and user_id not in self.screened_user_set:
-                self.send_room_chat(channel, welcome_message, message_delay)
-                self.already_welcomed_set.add(user_id)
+                welcome = self.send_room_chat(channel, welcome_message, message_delay)
+
+                if welcome:
+                    self.already_welcomed_set.add(user_id)
 
     def invite_guests(self, channel, user_info, message_delay=2):
 
@@ -699,7 +745,7 @@ class ModClient(Clubhouse, Tracker):
         return token
 
     def terminate_channel(self, channel):
-        self.channel.leave(channel)
+        self.channel.leave_channel(channel)
 
         if self.keep_alive_thread:
             self.keep_alive_thread.set()
@@ -736,7 +782,8 @@ class ModClient(Clubhouse, Tracker):
 
     automod_clubs = set(Config.config_to_list(Config.load_config(), "AutoModClubs", True))
     social_clubs = set(Config.config_to_list(Config.load_config(), "SocialClubs", True))
-    # self.respond_ping_list = set(Config.config_to_list(Config.load_config(), "RespondPing", True))
+    wwsl_club = Config.config_to_dict(Config.load_config(), "Clubs", "wwsl")
+    ping_response_set = set(Config.config_to_list(Config.load_config(), "RespondPing", True))
     mod_list = set(Config.config_to_list(Config.load_config(), "ModList", True))
     guest_list = set(
         (Config.config_to_list(Config.load_config(), "GuestList", True)
@@ -752,7 +799,7 @@ class ModClient(Clubhouse, Tracker):
     time_created = None
     token = None
 
-    active_channel = False
+    channel_active = False
     waiting_speaker = False
     granted_speaker = False
     active_speaker = False
@@ -785,5 +832,4 @@ class ModClient(Clubhouse, Tracker):
 
     # attempted_ping_response = set()
 
-    # s3_dump_interval = 0
-    s3_dump_counter = 0
+
