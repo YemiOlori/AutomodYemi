@@ -1,14 +1,18 @@
 #!/usr/bin/env python
 
+
 import logging
 from datetime import datetime
-
 import pytz
 
-from .moderator import ModClient as Mod
-from .chat import ChatClient as Chat
-from .audio import AudioClient as Audio
-from .tracker import Tracker
+# import sys
+# sys.path.append("/Users/deon/Documents/GitHub/ch_auto_mod/automod")
+
+from automod.moderator import ModClient as Mod
+from automod.chat import ChatClient as Chat
+from automod.audio import AudioClient as Audio
+from automod.tracker import Tracker
+
 
 set_interval = Mod.set_interval
 
@@ -207,5 +211,8 @@ class AutoModClient(Mod, Chat, Audio, Tracker):
     chat_counter = 0
     dump_counter = 0
 
+
+if __name__ == "__main__":
+    run_automod_client(interval=300)
 
 
