@@ -707,12 +707,12 @@ class ModClient(Clubhouse):
 
     def set_runtime_announcement(self, channel, interval=30, delay=2):
         message = self.set_runtime_message()
-
         self.send_room_chat(channel, message, delay)
 
         @self.set_interval(interval * 60)
         def announcement():
-            response = self.send_room_chat(channel, message, delay)
+            message_current = self.set_runtime_message()
+            response = self.send_room_chat(channel, message_current, delay)
             response = response.get("success")
             return response
 
