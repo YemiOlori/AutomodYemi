@@ -66,7 +66,6 @@ def validate_response(func):
 
         except requests.exceptions.RequestException as req_error:
             logging.error(f"{func.__name__} {req_error}")
-            print("req")
             return req.json()
 
         except KeyError as key_error:
