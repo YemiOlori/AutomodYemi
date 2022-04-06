@@ -24,7 +24,7 @@ class AutoModClient(Mod, Chat, Audio, Tracker):
         self.waiting_ping_thread = self.listen_for_ping(interval)
 
     @set_interval(30)
-    def listen_for_ping(self, interval, dump_interval=4):
+    def listen_for_ping(self, interval=300, dump_interval=4):
         logging.info("Waiting for ping")
 
         notifications = self.notifications.get_notifications()
@@ -84,11 +84,22 @@ class AutoModClient(Mod, Chat, Audio, Tracker):
         user_name = notification.get("user_profile").get("name")
         logging.info(f"Client pinged to {channel} by {user_name}: {message}")
 
-        join_info = self.automod_init(channel)
+        join = self.automod_init(channel, notification_id)
+        if join:
+            self.scanned_notifications_set.add(notification_id)
+
+        return join
+
+    def automod_init(
+            self, channel, notification_id=None, api_retry_interval_sec=10, thread_timeout=120,
+            announcement=None, announcement_interval_min=60, announcement_delay=None):
+
+        join_info = self.channel_init(
+            channel, api_retry_interval_sec, thread_timeout, announcement, announcement_interval_min,
+            announcement_delay)
 
         if join_info is False:
             self.ping_responded_set.add(channel)
-            self.scanned_notifications_set.add(notification_id)
             return
 
         elif not join_info:
@@ -102,55 +113,37 @@ class AutoModClient(Mod, Chat, Audio, Tracker):
                 self.ping_responded_set.add(channel)
                 self.scanned_notifications_set.add(notification_id)
                 logging.info("Channel is closed")
-
             return
 
         if self.waiting_ping_thread:
             self.waiting_ping_thread.set()
 
         self.active_channel_thread = self.active_channel_init(channel)
+        self.chat_client_thread = self.chat_client_init(channel)
+        self.welcome_client_thread = self.welcome_client_init(channel)
         self.automod_active = True
         self.ping_responded_set.add(channel)
         self.scanned_notifications_set.add(notification_id)
-        logging.info(self.scanned_notifications_set)
+        logging.info(f"Scanned notifications: {self.scanned_notifications_set}")
+
+        if not join_info.get("is_private") and not join_info.get("is_social_mode"):
+            self.data_dump(join_info, "join", channel)
 
         return True
 
-    def automod_init(
-            self, channel, api_retry_interval_sec=10, thread_timeout=120,
-            announcement=None, announcement_interval_min=60, announcement_delay=None):
-
-        join_info = self.channel_init(
-            channel, api_retry_interval_sec, thread_timeout,
-            announcement, announcement_interval_min, announcement_delay)
-
-        if join_info is False:
-            pass
-
-        elif not join_info:
-            pass
-
-        elif join_info.get("success") and not join_info.get("is_private") and not join_info.get("is_social_mode"):
-            self.data_dump(join_info, "join", channel)
-
-        return join_info
-
     @set_interval(15)
     def active_channel_init(
-            self, channel, message_delay=2, reconnect_interval=10, reconnect_timeout=120, response_interval=300,
-            response_delay=10, chat_interval=2, dump_interval=16):
+            self, channel, message_delay=2, reconnect_interval=10, reconnect_timeout=120, dump_interval=16):
 
         channel_info = self.active_channel(channel, message_delay, reconnect_interval, reconnect_timeout)
+
         if not channel_info:
             self.automod_active = False
             self.waiting_ping_thread = self.listen_for_ping()
             self.terminate_channel_init(channel)
             return
 
-        if self.get_chat_enabled(channel_info) and self.chat_counter >= chat_interval:
-            self.chat_counter = 0
-
-            self.run_chat_client(channel, response_interval, response_delay)
+        self.chat_active = self.get_chat_enabled(channel_info)
 
         if self.dump_counter == dump_interval:
             self.dump_counter = 0
@@ -163,9 +156,23 @@ class AutoModClient(Mod, Chat, Audio, Tracker):
             if not channel_info.get("is_private") and not channel_info.get("is_social_mode"):
                 self.data_dump(channel_info, "channel", channel)
 
-        self.chat_counter += 1
         self.dump_counter += 1
 
+        return True
+
+    @set_interval(20)
+    def chat_client_init(self, channel, response_interval=300, response_delay=10):
+        if not self.chat_active:
+            return
+        self.run_chat_client(channel, response_interval, response_delay)
+        return True
+
+    @set_interval(20)
+    def welcome_client_init(self, channel, message_delay=5):
+        user_info = self.get_users_info(channel)
+        self.welcome_guests(channel, user_info, message_delay)
+        if not user_info:
+            return
         return True
 
     def terminate_channel_init(self, channel):
@@ -175,8 +182,13 @@ class AutoModClient(Mod, Chat, Audio, Tracker):
         if self.active_channel_thread:
             self.active_channel_thread.set()
 
+        if self.chat_client_thread:
+            self.chat_client_thread.set()
+
+
 
     automod_active = None
+    chat_active = None
 
     ping_responded_set = set()
     scanned_notifications_set = set()
@@ -184,6 +196,7 @@ class AutoModClient(Mod, Chat, Audio, Tracker):
     waiting_ping_thread = None
     active_channel_thread = None
     chat_client_thread = None
+    welcome_client_thread = None
 
     chat_counter = 0
     dump_counter = 0
