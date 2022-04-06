@@ -58,11 +58,18 @@ class AudioClient:
         self.RTC.muteLocalAudioStream(mute=False)
         return
 
-    def start_music(self, channel, join_dict, task=None, announcement=None, interval=3600):
+    def start_audio(self, channel, token=None, join_info=None):
+        if not token and not join_info:
+            join_info = Clubhouse().channel.join_channel(channel)
+            token = join_info.get(token)
+
+        elif not token and join_info:
+            token = join_info.get(token)
+
         # Check for the voice level.
         if self.RTC:
-            token = join_dict['token']
-            self.RTC.joinChannel(token, channel, "", int(self.client_id))
+            token = token
+            self.RTC.joinChannel(token, channel, "", int(Clubhouse().client_id))
             self.RTC.muteLocalAudioStream(mute=False)
             Clubhouse().channel.update_audio_mode(channel)
             self.RTC.muteAllRemoteAudioStreams(mute=True)
