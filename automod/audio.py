@@ -64,7 +64,7 @@ class AudioClient:
             token = join_dict['token']
             self.RTC.joinChannel(token, channel, "", int(self.client_id))
             self.RTC.muteLocalAudioStream(mute=False)
-            self.channel.update_audio_mode(channel)
+            Clubhouse().channel.update_audio_mode(channel)
             self.RTC.muteAllRemoteAudioStreams(mute=True)
             logging.info("RTC audio loaded")
             logging.info("RTC remote audio muted")
