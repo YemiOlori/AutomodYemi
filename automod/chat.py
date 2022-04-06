@@ -307,7 +307,7 @@ class UrbanDict(ChatConfig):
     @staticmethod
     def set_response(user_name, term, definition):
 
-        term = f"Urban Dictionary [{term}]"
+        term = f"[Urban Dictionary] {term}"
         term = fancy.bold_serif(term)
 
         reply_message = f"@{user_name} {term}—{definition}"
@@ -457,7 +457,7 @@ class MW(ChatConfig):
     @staticmethod
     def set_response(user_name, term, definition):
 
-        term = f"Merriam-Webster Dictionary [{term}]"
+        term = f"[Merriam-Webster] {term}"
         term = fancy.bold_serif(term)
 
         reply_message = f"@{user_name} {term}—{definition}"
