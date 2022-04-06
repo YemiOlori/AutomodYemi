@@ -163,16 +163,16 @@ class AutoModClient(Mod, Chat, Audio, Tracker):
     @set_interval(20)
     def chat_client_init(self, channel, response_interval=300, response_delay=10):
         if not self.chat_active:
-            return
+            return True
         self.run_chat_client(channel, response_interval, response_delay)
         return True
 
     @set_interval(20)
     def welcome_client_init(self, channel, message_delay=5):
         user_info = self.get_users_info(channel)
-        self.welcome_guests(channel, user_info, message_delay)
         if not user_info:
-            return
+            return True
+        self.welcome_guests(channel, user_info, message_delay)
         return True
 
     def terminate_channel_init(self, channel):
@@ -185,6 +185,8 @@ class AutoModClient(Mod, Chat, Audio, Tracker):
         if self.chat_client_thread:
             self.chat_client_thread.set()
 
+        if self.welcome_client_thread:
+            self.welcome_client_thread.set()
 
 
     automod_active = None
