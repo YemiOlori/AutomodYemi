@@ -14,6 +14,23 @@ from .clubhouse import Config
 class Tracker:
     S3_BUCKET = Config.config_to_dict(Config.load_config(), "S3", "bucket")
 
+    def data_dump(self, dump, source, channel=""):
+        log = f"Dumped {source} {channel}"
+        if source == "feed":
+            key = source
+        elif source == "channel":
+            key = f"channel_{dump.get('channel')}"
+        elif source == "channel_dict":
+            key = f"channel_{dump.get('channel_info').get('channel')}"
+        elif source == 'join':
+            key = f"join_{dump.get('channel')}"
+        else:
+            key = "unrecognized"
+            log = f"Unrecognized dumping source {source}"
+        logging.info(log)
+        response = self.s3_client_dump(dump, key)
+        return response
+
     def s3_client_dump(self, dump, key):
         """
         A function to set the interval decorator.
@@ -40,19 +57,4 @@ class Tracker:
         logging.info(run)
         return response
 
-    def data_dump(self, dump, source, channel=""):
-        log = f"Dumped {source} {channel}"
-        if source == "feed":
-            key = source
-        elif source == "channel":
-            key = f"channel_{dump.get('channel')}"
-        elif source == "channel_dict":
-            key = f"channel_{dump.get('channel_info').get('channel')}"
-        elif source == 'join':
-            key = f"join_{dump.get('channel')}"
-        else:
-            key = "unrecognized"
-            log = f"Unrecognized dumping source {source}"
-        logging.info(log)
-        response = self.s3_client_dump(dump, key)
-        return response
+
