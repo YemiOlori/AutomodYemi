@@ -24,7 +24,6 @@ class ModClient(Clubhouse):
     def __init__(self):
         super().__init__()
 
-
     def __str__(self):
         pass
 
@@ -56,7 +55,7 @@ class ModClient(Clubhouse):
             is_speaker = self.wait_to_speak(channel, api_retry_interval_sec, thread_timeout)
 
             if not is_speaker:
-                logging.info("Client was not invited as speaker")
+                loggiam ng.info("Client was not invited as speaker")
                 self.terminate_channel(channel)
                 return False
 
@@ -142,14 +141,14 @@ class ModClient(Clubhouse):
             self.url_announcement = True
 
         # Set in_automod_club status
-        if self.club_id in self.automod_clubs:
+        if str(self.club_id) in self.automod_clubs:
             self.in_automod_club = True
 
         # Set in_social_club status
-        elif self.club_id in self.social_clubs:
+        elif str(self.club_id) in self.social_clubs:
             self.in_social_club = True
 
-        elif self.club_id in self.wwsl_club:
+        elif str(self.club_id) in self.wwsl_club:
             self.in_wwsl_club = True
 
         return True
