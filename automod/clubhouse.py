@@ -82,7 +82,7 @@ def validate_response(func):
 class Config:
 
     @staticmethod
-    def load_config(config_file="/Users/deon/Documents/GitHub/HQ/config.ini"):
+    def load_config(config_file="/Users/deon/Documents/GitHub_Old/HQ/config.ini"):
         """A function to read the config file."""
         config_object = ConfigParser()
         config_object.read(config_file)
@@ -132,7 +132,7 @@ class Config:
         :param client: A Clubhouse object
         :return client: A Clubhouse object updated with configuration information
         """
-        config_file = "/Users/deon/Documents/GitHub/HQ/setting.ini"
+        config_file = "/Users/deon/Documents/GitHub_Old/HQ/setting.ini"
         config_object = Config.load_config(config_file)
         user_config = Config.config_to_dict(config_object, "Account")
         client_id = user_config.get("client_id")
@@ -152,7 +152,7 @@ class Config:
         return reload_dict
 
     @staticmethod
-    def write_config(user_id, user_token, user_device, filename='/Users/deon/Documents/GitHub/HQ/setting.ini'):
+    def write_config(user_id, user_token, user_device, filename='/Users/deon/Documents/GitHub_Old/HQ/setting.ini'):
         """ (str, str, str, str) -> bool
 
         Write Config. return True on successful file write
