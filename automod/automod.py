@@ -1,17 +1,17 @@
 #!/usr/bin/env python
 
-
 import logging
 from datetime import datetime
 import pytz
 
 # import sys
-# sys.path.append("/Users/deon/Documents/GitHub/ch_auto_mod/automod")
+# sys.path.append('/Users/deon/Documents/GitHub_local/am_local_2')
 
 from automod.moderator import ModClient as Mod
 from automod.chat import ChatClient as Chat
 from automod.audio import AudioClient as Audio
 from automod.tracker import Tracker
+from automod.logger import Logger
 
 
 set_interval = Mod.set_interval
@@ -26,6 +26,10 @@ class AutoModClient(Mod, Chat, Audio, Tracker):
 
     def __init__(self):
         super().__init__()
+        
+        logger = Logger()
+        logger.run_logger()
+        logging.info("API Configuration Loaded")
 
     def run_automod(self, interval=300):
         self.automod_active = False
