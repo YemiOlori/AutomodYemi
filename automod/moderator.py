@@ -55,7 +55,7 @@ class ModClient(Clubhouse):
             is_speaker = self.wait_to_speak(channel, api_retry_interval_sec, thread_timeout)
 
             if not is_speaker:
-                loggiam ng.info("Client was not invited as speaker")
+                logging.info("Client was not invited as speaker")
                 self.terminate_channel(channel)
                 return False
 
