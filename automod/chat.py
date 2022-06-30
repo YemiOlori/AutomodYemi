@@ -11,6 +11,7 @@ from .clubhouse import ChannelChat
 from .clubhouse import Message
 from .fancytext import fancy
 from .clubhouse import validate_response
+from . import logger
 
 
 class ChatConfig(Auth):
