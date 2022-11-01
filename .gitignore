@@ -184,7 +184,6 @@ node_modules
 # Settings Files
 automod/mod_config.py
 automod/logger_test.py
-*.ini
 *.icloud
 
 
@@ -202,3 +201,12 @@ automod/moderator_v1.py
 ptr.jpg
 automod/.idea/*
 saved/*
+automod/automod_config.ini
+automod/autowolf_config.ini
+automod/config.ini
+automod/trenches_setting.ini
+automod/trenches_config.ini
+automod/trenches_config copy.ini
+automod/splash_ave_config.ini
+automod/setting.ini
+automod/deon_config.ini
