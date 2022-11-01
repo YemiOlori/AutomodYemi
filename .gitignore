@@ -209,8 +209,5 @@ saved/PGX73o6p.ts
 saved/MRQ9pQyb.ts
 saved/MOJ5kDr0.ts
 ptr.jpg
-automod/.idea/vcs.xml
-automod/.idea/modules.xml
-automod/.idea/misc.xml
-automod/.idea/inspectionProfiles/Project_Default.xml
-automod/.idea/inspectionProfiles/profiles_settings.xml
+automod/.idea/*
+saved/*
